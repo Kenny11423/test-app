@@ -1,0 +1,5 @@
+localhost
+dbeaver
+123456
+test_prep_db
+ONLINE

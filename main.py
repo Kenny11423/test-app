@@ -1,0 +1,91 @@
+import sys
+from PySide6.QtWidgets import (QApplication, QMainWindow, QStackedWidget)
+from database.manager import db_manager
+from ui.login import LoginWidget, RegisterWidget
+from ui.admin_dashboard import AdminDashboard
+from ui.student_dashboard import StudentDashboard
+from ui.test_session import TestSessionWidget
+from ui.offline import ServerOfflineWidget
+from core.network import ServerStatusMonitor
+
+class MainWindow(QMainWindow):
+    def __init__(self):
+        super().__init__()
+        self.setWindowTitle("Ứng dụng Ôn thi Trực tuyến")
+        self.resize(800, 600)
+        
+        self.central_widget = QStackedWidget()
+        self.setCentralWidget(self.central_widget)
+        
+        self.user = None
+        self.offline_widget = ServerOfflineWidget(self.check_server_connection)
+        self.central_widget.addWidget(self.offline_widget)
+        
+        # Setup Server Monitor
+        self.monitor = ServerStatusMonitor()
+        self.monitor.status_changed.connect(self.handle_server_status)
+        self.monitor.start()
+        
+        # Initial check
+        self.check_server_connection()
+
+    def handle_server_status(self, is_online):
+        if is_online:
+            if not self.user: # Only go to login if not already logged in
+                self.show_login()
+        else:
+            self.central_widget.setCurrentWidget(self.offline_widget)
+
+    def check_server_connection(self):
+        # Triggered by "Retry" button
+        self.monitor.check_connection()
+
+    def show_login(self):
+        # Only add views if not already present or refresh them
+        self.login_widget = LoginWidget(self.on_login_success, self.switch_to_register)
+        self.register_widget = RegisterWidget(self.on_register_success, self.switch_to_login)
+        
+        self.central_widget.addWidget(self.login_widget)
+        self.central_widget.addWidget(self.register_widget)
+        self.central_widget.setCurrentWidget(self.login_widget)
+
+    def switch_to_register(self):
+        self.central_widget.setCurrentWidget(self.register_widget)
+
+    def switch_to_login(self):
+        self.central_widget.setCurrentWidget(self.login_widget)
+
+    def on_login_success(self, user):
+        self.user = user
+        if user.role == 'Admin':
+            self.show_admin_dashboard()
+        else:
+            self.show_student_dashboard()
+
+    def on_register_success(self):
+        self.central_widget.setCurrentWidget(self.login_widget)
+
+    def show_admin_dashboard(self):
+        self.admin_dash = AdminDashboard(self.user, self.handle_logout)
+        self.central_widget.addWidget(self.admin_dash)
+        self.central_widget.setCurrentWidget(self.admin_dash)
+
+    def show_student_dashboard(self):
+        self.student_dash = StudentDashboard(self.user, self.start_test, self.handle_logout)
+        self.central_widget.addWidget(self.student_dash)
+        self.central_widget.setCurrentWidget(self.student_dash)
+
+    def start_test(self, category_id):
+        self.test_widget = TestSessionWidget(self.user.id, category_id, self.show_student_dashboard)
+        self.central_widget.addWidget(self.test_widget)
+        self.central_widget.setCurrentWidget(self.test_widget)
+
+    def handle_logout(self):
+        self.user = None
+        self.show_login()
+
+if __name__ == "__main__":
+    app = QApplication(sys.argv)
+    window = MainWindow()
+    window.show()
+    sys.exit(app.exec())
