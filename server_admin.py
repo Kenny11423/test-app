@@ -9,7 +9,7 @@ class ServerAdminApp(QMainWindow):
     def __init__(self):
         super().__init__()
         self.setWindowTitle("Quản trị Máy chủ & Cơ sở dữ liệu")
-        self.setFixedSize(400, 450)
+        self.setFixedSize(400, 550)
         
         self.central_widget = QWidget()
         self.setCentralWidget(self.central_widget)
@@ -19,6 +19,7 @@ class ServerAdminApp(QMainWindow):
         self.layout.addWidget(QLabel("### Cấu hình kết nối MySQL"))
         
         self.host = QLineEdit("localhost")
+        self.port = QLineEdit("3306")
         self.user = QLineEdit("root")
         self.password = QLineEdit()
         self.password.setEchoMode(QLineEdit.Password)
@@ -26,6 +27,8 @@ class ServerAdminApp(QMainWindow):
         
         self.layout.addWidget(QLabel("Máy chủ (Host):"))
         self.layout.addWidget(self.host)
+        self.layout.addWidget(QLabel("Cổng (Port):"))
+        self.layout.addWidget(self.port)
         self.layout.addWidget(QLabel("Người dùng (User):"))
         self.layout.addWidget(self.user)
         self.layout.addWidget(QLabel("Mật khẩu (Password):"))
@@ -77,6 +80,7 @@ class ServerAdminApp(QMainWindow):
     def get_config(self):
         return {
             "host": self.host.text(),
+            "port": int(self.port.text() or 3306),
             "user": self.user.text(),
             "password": self.password.text(),
             "database": self.database.text()
@@ -89,6 +93,7 @@ class ServerAdminApp(QMainWindow):
         try:
             with open("db.txt", "w") as f:
                 f.write(f"{config['host']}\n")
+                f.write(f"{config['port']}\n")
                 f.write(f"{config['user']}\n")
                 f.write(f"{config['password']}\n")
                 f.write(f"{config['database']}\n")
@@ -101,13 +106,14 @@ class ServerAdminApp(QMainWindow):
         try:
             with open("db.txt", "r") as f:
                 lines = f.readlines()
-                if len(lines) >= 4:
-                    self.host.setText(lines[0].strip())
-                    self.user.setText(lines[1].strip())
-                    self.password.setText(lines[2].strip())
-                    self.database.setText(lines[3].strip())
                 if len(lines) >= 5:
-                    self.public_check.setChecked(lines[4].strip() == "ONLINE")
+                    self.host.setText(lines[0].strip())
+                    self.port.setText(lines[1].strip())
+                    self.user.setText(lines[2].strip())
+                    self.password.setText(lines[3].strip())
+                    self.database.setText(lines[4].strip())
+                if len(lines) >= 6:
+                    self.public_check.setChecked(lines[5].strip() == "ONLINE")
         except FileNotFoundError:
             pass
 

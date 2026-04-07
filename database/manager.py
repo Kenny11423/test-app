@@ -12,8 +12,8 @@ class DatabaseManager:
             cls._instance._last_config = None
         return cls._instance
 
-    def connect(self, host, user, password, database):
-        config = (host, user, password, database)
+    def connect(self, host, user, password, database, port=3306):
+        config = (host, user, password, database, port)
         if self.connection and self.connection.is_connected() and self._last_config == config:
             return True
 
@@ -22,7 +22,8 @@ class DatabaseManager:
             temp_conn = mysql.connector.connect(
                 host=host,
                 user=user,
-                password=password
+                password=password,
+                port=port
             )
             temp_cursor = temp_conn.cursor()
             temp_cursor.execute(f"CREATE DATABASE IF NOT EXISTS {database}")
@@ -33,7 +34,8 @@ class DatabaseManager:
                 host=host,
                 user=user,
                 password=password,
-                database=database
+                database=database,
+                port=port
             )
             if self.connection.is_connected():
                 self._last_config = config

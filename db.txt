@@ -1,4 +1,5 @@
-localhost
+0.tcp.ap.ngrok.io
+12181
 dbeaver
 123456
 test_prep_db

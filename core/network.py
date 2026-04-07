@@ -21,13 +21,14 @@ class ServerStatusMonitor(QObject):
         try:
             with open("db.txt", "r") as f:
                 lines = [l.strip() for l in f.readlines()]
-                if len(lines) >= 5:
+                if len(lines) >= 6:
                     return {
                         "host": lines[0],
-                        "user": lines[1],
-                        "password": lines[2],
-                        "database": lines[3]
-                    }, lines[4] == "ONLINE"
+                        "port": int(lines[1]),
+                        "user": lines[2],
+                        "password": lines[3],
+                        "database": lines[4]
+                    }, lines[5] == "ONLINE"
         except Exception:
             pass
         return None, False
