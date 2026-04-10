@@ -56,3 +56,9 @@ class Question:
                 db_manager.execute_query(ans_query, (question_id, text, is_correct))
             return True
         return False
+
+    @staticmethod
+    def delete(question_id):
+        query = "DELETE FROM questions WHERE id = %s"
+        db_manager.execute_query(query, (question_id,))
+        return True

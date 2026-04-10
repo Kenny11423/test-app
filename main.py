@@ -1,4 +1,5 @@
 import sys
+import os
 from PySide6.QtWidgets import (QApplication, QMainWindow, QStackedWidget)
 from database.manager import db_manager
 from ui.login import LoginWidget, RegisterWidget
@@ -14,6 +15,9 @@ class MainWindow(QMainWindow):
         self.setWindowTitle("Ứng dụng Ôn thi Trực tuyến")
         self.resize(800, 600)
         
+        # Ensure db.txt exists with some defaults if it doesn't
+        self.ensure_db_config()
+
         self.central_widget = QStackedWidget()
         self.setCentralWidget(self.central_widget)
         
@@ -24,24 +28,35 @@ class MainWindow(QMainWindow):
         # Setup Server Monitor
         self.monitor = ServerStatusMonitor()
         self.monitor.status_changed.connect(self.handle_server_status)
-        self.monitor.start()
         
-        # Initial check
-        self.check_server_connection()
+        # Pre-check before showing UI
+        self.monitor.check_connection()
+        if self.monitor.is_online:
+            self.show_login()
+        else:
+            self.central_widget.setCurrentWidget(self.offline_widget)
+            
+        self.monitor.start()
+
+    def ensure_db_config(self):
+        if not os.path.exists("db.txt"):
+            with open("db.txt", "w") as f:
+                # Default local settings: host, port, user, pass, db
+                f.write("localhost\n3306\nroot\n\ntest_prep_db\nONLINE")
 
     def handle_server_status(self, is_online):
         if is_online:
-            if not self.user: # Only go to login if not already logged in
+            if not self.user and self.central_widget.currentWidget() == self.offline_widget:
                 self.show_login()
         else:
+            # If we lose connection, go back to offline screen
+            self.user = None
             self.central_widget.setCurrentWidget(self.offline_widget)
 
     def check_server_connection(self):
-        # Triggered by "Retry" button
         self.monitor.check_connection()
 
     def show_login(self):
-        # Only add views if not already present or refresh them
         self.login_widget = LoginWidget(self.on_login_success, self.switch_to_register)
         self.register_widget = RegisterWidget(self.on_register_success, self.switch_to_login)
         

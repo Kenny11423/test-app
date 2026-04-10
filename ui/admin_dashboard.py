@@ -1,7 +1,9 @@
 from PySide6.QtWidgets import (QWidget, QVBoxLayout, QLabel, QLineEdit, 
                              QPushButton, QMessageBox, QComboBox, QTextEdit, 
-                             QFormLayout, QHBoxLayout, QListWidget, QSpinBox)
+                             QFormLayout, QHBoxLayout, QListWidget, QSpinBox,
+                             QFileDialog, QTabWidget, QListWidgetItem)
 from core.question import Category, Question
+from PySide6.QtCore import Qt
 
 class AdminDashboard(QWidget):
     def __init__(self, user, on_logout):
@@ -11,35 +13,70 @@ class AdminDashboard(QWidget):
         self.init_ui()
 
     def init_ui(self):
-        self.layout = QVBoxLayout()
+        self.main_layout = QVBoxLayout()
         
+        # Header
+        header_layout = QHBoxLayout()
         self.welcome_label = QLabel(f"Quản trị viên: {self.user.username}")
-        self.layout.addWidget(self.welcome_label)
-
+        self.welcome_label.setStyleSheet("font-weight: bold; font-size: 16px;")
         self.logout_btn = QPushButton("Đăng xuất")
         self.logout_btn.clicked.connect(self.on_logout)
-        self.layout.addWidget(self.logout_btn)
+        header_layout.addWidget(self.welcome_label)
+        header_layout.addStretch()
+        header_layout.addWidget(self.logout_btn)
+        self.main_layout.addLayout(header_layout)
 
-        # Tab or sections
-        self.cat_layout = QVBoxLayout()
-        self.cat_layout.addWidget(QLabel("### Quản lý Danh mục"))
+        # Tabs
+        self.tabs = QTabWidget()
+        
+        # Tab 1: Categories & Add Questions
+        self.tab1 = QWidget()
+        self.setup_tab1()
+        self.tabs.addTab(self.tab1, "Thêm Câu hỏi")
+
+        # Tab 2: Manage Existing Questions
+        self.tab2 = QWidget()
+        self.setup_tab2()
+        self.tabs.addTab(self.tab2, "Quản lý Đề thi")
+
+        # Tab 3: Results
+        self.tab3 = QWidget()
+        self.setup_tab3()
+        self.tabs.addTab(self.tab3, "Kết quả")
+
+        self.main_layout.addWidget(self.tabs)
+        self.setLayout(self.main_layout)
+        
+        # Initial refreshes
+        self.refresh_categories()
+        self.refresh_results()
+        self.refresh_manage_questions()
+
+    def setup_tab1(self):
+        layout = QVBoxLayout(self.tab1)
+        
+        # Categories section
+        cat_group = QVBoxLayout()
+        cat_group.addWidget(QLabel("### Quản lý Danh mục (Lớp học)"))
         self.cat_name_input = QLineEdit()
-        self.cat_name_input.setPlaceholderText("Tên Danh mục")
+        self.cat_name_input.setPlaceholderText("Tên Danh mục (VD: Toán 12)")
         self.cat_desc_input = QLineEdit()
         self.cat_desc_input.setPlaceholderText("Mô tả")
         self.add_cat_btn = QPushButton("Thêm Danh mục")
         self.add_cat_btn.clicked.connect(self.add_category)
         
-        self.cat_layout.addWidget(self.cat_name_input)
-        self.cat_layout.addWidget(self.cat_desc_input)
-        self.cat_layout.addWidget(self.add_cat_btn)
-        self.layout.addLayout(self.cat_layout)
+        cat_group.addWidget(self.cat_name_input)
+        cat_group.addWidget(self.cat_desc_input)
+        cat_group.addWidget(self.add_cat_btn)
+        layout.addLayout(cat_group)
 
-        self.q_layout = QVBoxLayout()
-        self.q_layout.addWidget(QLabel("### Quản lý Câu hỏi"))
+        layout.addSpacing(20)
+
+        # Add Questions section
+        q_group = QVBoxLayout()
+        q_group.addWidget(QLabel("### Thêm Câu hỏi mới"))
         
         self.q_cat_combo = QComboBox()
-        self.refresh_categories()
         
         self.q_text_input = QTextEdit()
         self.q_text_input.setPlaceholderText("Nội dung câu hỏi")
@@ -49,7 +86,6 @@ class AdminDashboard(QWidget):
         self.difficulty_combo.addItem("Trung bình", "Medium")
         self.difficulty_combo.addItem("Khó", "Hard")
         
-        # Choices
         self.choices_layout = QVBoxLayout()
         self.choice_inputs = []
         for i in range(4):
@@ -63,35 +99,85 @@ class AdminDashboard(QWidget):
             self.choices_layout.addLayout(h_layout)
             self.choice_inputs.append((c_input, is_correct_btn))
 
+        h_btn_layout = QHBoxLayout()
         self.add_q_btn = QPushButton("Thêm Câu hỏi")
         self.add_q_btn.clicked.connect(self.add_question)
+        self.import_pdf_btn = QPushButton("Nhập từ PDF")
+        self.import_pdf_btn.clicked.connect(self.import_from_pdf)
+        h_btn_layout.addWidget(self.add_q_btn)
+        h_btn_layout.addWidget(self.import_pdf_btn)
 
-        self.q_layout.addWidget(QLabel("Chọn Danh mục:"))
-        self.q_layout.addWidget(self.q_cat_combo)
-        self.q_layout.addWidget(QLabel("Nội dung câu hỏi:"))
-        self.q_layout.addWidget(self.q_text_input)
-        self.q_layout.addWidget(QLabel("Độ khó:"))
-        self.q_layout.addWidget(self.difficulty_combo)
-        self.q_layout.addLayout(self.choices_layout)
-        self.q_layout.addWidget(self.add_q_btn)
+        q_group.addWidget(QLabel("Chọn Danh mục:"))
+        q_group.addWidget(self.q_cat_combo)
+        q_group.addWidget(QLabel("Nội dung câu hỏi:"))
+        q_group.addWidget(self.q_text_input)
+        q_group.addWidget(QLabel("Độ khó:"))
+        q_group.addWidget(self.difficulty_combo)
+        q_group.addLayout(self.choices_layout)
+        q_group.addLayout(h_btn_layout)
+        layout.addLayout(q_group)
+
+    def setup_tab2(self):
+        layout = QVBoxLayout(self.tab2)
+        layout.addWidget(QLabel("### Danh sách Câu hỏi hiện có"))
         
-        self.layout.addLayout(self.q_layout)
+        self.manage_cat_combo = QComboBox()
+        self.manage_cat_combo.currentIndexChanged.connect(self.refresh_manage_questions)
+        layout.addWidget(QLabel("Lọc theo danh mục:"))
+        layout.addWidget(self.manage_cat_combo)
+        
+        self.q_list = QListWidget()
+        layout.addWidget(self.q_list)
+        
+        h_layout = QHBoxLayout()
+        self.delete_q_btn = QPushButton("Xóa Câu hỏi")
+        self.delete_q_btn.setStyleSheet("background-color: #f44336; color: white;")
+        self.delete_q_btn.clicked.connect(self.delete_question)
+        self.refresh_q_btn = QPushButton("Làm mới danh sách")
+        self.refresh_q_btn.clicked.connect(self.refresh_manage_questions)
+        
+        h_layout.addWidget(self.delete_q_btn)
+        h_layout.addWidget(self.refresh_q_btn)
+        layout.addLayout(h_layout)
 
-        self.res_layout = QVBoxLayout()
-        self.res_layout.addWidget(QLabel("### Kết quả học sinh"))
+    def setup_tab3(self):
+        layout = QVBoxLayout(self.tab3)
+        layout.addWidget(QLabel("### Kết quả học sinh"))
         self.res_list = QListWidget()
         self.refresh_results_btn = QPushButton("Làm mới kết quả")
         self.refresh_results_btn.clicked.connect(self.refresh_results)
         self.export_res_btn = QPushButton("Xuất ra CSV")
         self.export_res_btn.clicked.connect(self.export_to_csv)
         
-        self.res_layout.addWidget(self.res_list)
-        self.res_layout.addWidget(self.refresh_results_btn)
-        self.res_layout.addWidget(self.export_res_btn)
-        self.layout.addLayout(self.res_layout)
+        layout.addWidget(self.res_list)
+        layout.addWidget(self.refresh_results_btn)
+        layout.addWidget(self.export_res_btn)
 
-        self.setLayout(self.layout)
-        self.refresh_results()
+    def refresh_manage_questions(self):
+        self.q_list.clear()
+        cat_id = self.manage_cat_combo.currentData()
+        if cat_id is None: return
+        
+        questions = Question.get_by_category(cat_id)
+        for q in questions:
+            item = QListWidgetItem(f"ID: {q.id} | {q.text[:60]}...")
+            item.setData(Qt.UserRole, q.id)
+            self.q_list.addItem(item)
+
+    def delete_question(self):
+        selected_item = self.q_list.currentItem()
+        if not selected_item:
+            QMessageBox.warning(self, "Lỗi", "Vui lòng chọn câu hỏi cần xóa.")
+            return
+        
+        q_id = selected_item.data(Qt.UserRole)
+        confirm = QMessageBox.question(self, "Xác nhận", f"Bạn có chắc muốn xóa câu hỏi ID {q_id}?", 
+                                     QMessageBox.Yes | QMessageBox.No)
+        
+        if confirm == QMessageBox.Yes:
+            if Question.delete(q_id):
+                QMessageBox.information(self, "Thành công", "Đã xóa câu hỏi.")
+                self.refresh_manage_questions()
 
     def refresh_results(self):
         from core.test import ResultHistory
@@ -116,9 +202,11 @@ class AdminDashboard(QWidget):
 
     def refresh_categories(self):
         self.q_cat_combo.clear()
+        self.manage_cat_combo.clear()
         categories = Category.get_all()
         for cat in categories:
             self.q_cat_combo.addItem(cat.name, cat.id)
+            self.manage_cat_combo.addItem(cat.name, cat.id)
 
     def add_category(self):
         name = self.cat_name_input.text()
@@ -132,7 +220,7 @@ class AdminDashboard(QWidget):
     def add_question(self):
         cat_id = self.q_cat_combo.currentData()
         text = self.q_text_input.toPlainText()
-        diff = self.difficulty_combo.currentData() # Use data for internal value
+        diff = self.difficulty_combo.currentData()
         
         choices = []
         for c_input, is_correct_btn in self.choice_inputs:
@@ -150,5 +238,25 @@ class AdminDashboard(QWidget):
             for c_input, is_correct_btn in self.choice_inputs:
                 c_input.clear()
                 is_correct_btn.setChecked(False)
+            self.refresh_manage_questions()
         else:
             QMessageBox.warning(self, "Lỗi", "Không thể thêm câu hỏi.")
+
+    def import_from_pdf(self):
+        cat_id = self.q_cat_combo.currentData()
+        if not cat_id:
+            QMessageBox.warning(self, "Lỗi", "Vui lòng chọn hoặc tạo danh mục trước.")
+            return
+
+        file_path, _ = QFileDialog.getOpenFileName(self, "Chọn file PDF Test", "", "PDF Files (*.pdf)")
+        if file_path:
+            try:
+                from core.pdf_handler import update_db_with_pdf
+                count = update_db_with_pdf(file_path, cat_id)
+                if count > 0:
+                    QMessageBox.information(self, "Thành công", f"Đã nhập thành công {count} câu hỏi từ PDF!")
+                    self.refresh_manage_questions()
+                else:
+                    QMessageBox.warning(self, "Lỗi", "Không tìm thấy câu hỏi hoặc đáp án hợp lệ trong PDF.")
+            except Exception as e:
+                QMessageBox.critical(self, "Lỗi", f"Có lỗi khi xử lý PDF: {e}")
