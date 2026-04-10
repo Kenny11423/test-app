@@ -30,16 +30,6 @@ A professional multiple-choice test preparation application that functions like 
 pip install -r requirements.txt
 ```
 
-### 3. Database & Server Setup
-1. Run the **Server Admin** app:
-   ```bash
-   python server_admin.py
-   ```
-2. Enter your MySQL credentials.
-3. Click **"Test Connection"** to verify.
-4. Click **"Run Schema"** to initialize the database tables.
-5. Check **"Publish App (Online)"** and click **"Save & Update Status"**.
-
 ### 4. Running the Main App
 1. Once the server is published, run the main app:
    ```bash
