@@ -72,7 +72,7 @@ class AdminDashboard(QWidget):
 
         layout.addSpacing(20)
 
-        # Add Questions section
+        # Phần Thêm Câu hỏi
         q_group = QVBoxLayout()
         q_group.addWidget(QLabel("### Thêm Câu hỏi mới"))
         
@@ -143,6 +143,13 @@ class AdminDashboard(QWidget):
     def setup_tab3(self):
         layout = QVBoxLayout(self.tab3)
         layout.addWidget(QLabel("### Kết quả học sinh"))
+        
+        # Thống kê nhanh
+        self.stats_label = QLabel("Đang tải thống kê...")
+        self.stats_label.setStyleSheet("background-color: #e3f2fd; padding: 10px; border-radius: 5px; border: 1px solid #2196f3;")
+        self.stats_label.setWordWrap(True)
+        layout.addWidget(self.stats_label)
+
         self.res_list = QListWidget()
         self.refresh_results_btn = QPushButton("Làm mới kết quả")
         self.refresh_results_btn.clicked.connect(self.refresh_results)
@@ -180,9 +187,24 @@ class AdminDashboard(QWidget):
                 self.refresh_manage_questions()
 
     def refresh_results(self):
-        from core.test import ResultHistory
+        from core.test import ResultHistory, PerformanceAnalyzer
         self.res_list.clear()
         results = ResultHistory.get_all_results()
+        
+        # Cập nhật thống kê bằng NumPy
+        stats = PerformanceAnalyzer.calculate_stats(results)
+        if stats:
+            self.stats_label.setText(
+                f"📊 <b>Thống kê nhanh:</b><br>"
+                f"Tổng số bài thi: {stats['count']} | "
+                f"Trung bình: {stats['mean']:.1f}% | "
+                f"Trung vị: {stats['median']:.1f}% | "
+                f"Độ lệch chuẩn: {stats['std_dev']:.1f}<br>"
+                f"Cao nhất: {stats['max']:.1f}% | Thấp nhất: {stats['min']:.1f}%"
+            )
+        else:
+            self.stats_label.setText("Chưa có dữ liệu thống kê.")
+
         for res in results:
             text = f"Người dùng: {res['username']} | Danh mục: {res['category_name']} | Điểm: {res['score']}/{res['total_questions']} | Ngày: {res['test_date']}"
             self.res_list.addItem(text)
@@ -260,3 +282,4 @@ class AdminDashboard(QWidget):
                     QMessageBox.warning(self, "Lỗi", "Không tìm thấy câu hỏi hoặc đáp án hợp lệ trong PDF.")
             except Exception as e:
                 QMessageBox.critical(self, "Lỗi", f"Có lỗi khi xử lý PDF: {e}")
+

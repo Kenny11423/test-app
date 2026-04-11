@@ -1,3 +1,4 @@
+# File: database/manager.py - Quản lý kết nối và các truy vấn cơ sở dữ liệu.
 import mysql.connector
 from mysql.connector import Error
 import os
@@ -83,7 +84,7 @@ class DatabaseManager:
             with open(schema_file, 'r') as f:
                 schema = f.read()
             
-            # Split schema by semicolon and filter out empty strings
+            # Chia schema bằng dấu chấm phẩy và lọc ra các chuỗi trống
             statements = [s.strip() for s in schema.split(';') if s.strip()]
             
             cursor = self.connection.cursor()

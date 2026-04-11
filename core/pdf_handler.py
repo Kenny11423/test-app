@@ -1,3 +1,4 @@
+# File: core/pdf_handler.py - Trích xuất và xử lý câu hỏi từ tệp PDF.
 import fitz
 import re
 from database.manager import db_manager
@@ -15,14 +16,14 @@ class PDFTestParser:
         return text
 
     def parse(self):
-        # 1. Extract all questions and their choices
-        # Patterns for different question formats
+        # 1. Trích xuất tất cả các câu hỏi và các lựa chọn của chúng
+        # Các mẫu cho các định dạng câu hỏi khác nhau
         question_blocks = re.split(r'Question \d+[.(]?[A-Z]{0,3}[)]?[.:]', self.text)
         question_blocks = question_blocks[1:]
         
         questions = []
         for i, block in enumerate(question_blocks):
-            # Try to find options A, B, C, D
+            # Thử tìm các tùy chọn A, B, C, D
             match = re.search(r'(?s)(.*?)\s*A\.\s*(.*?)\s*B\.\s*(.*?)\s*C\.\s*(.*?)\s*D\.\s*(.*?)(?=\n|$|Question|\d+\.)', block)
             if match:
                 q_text = match.group(1).strip()
@@ -37,23 +38,23 @@ class PDFTestParser:
                     'choices': [choice_a, choice_b, choice_c, choice_d]
                 })
 
-        # 2. Extract Answer Keys
+        # 2. Trích xuất đáp án
         answers = {}
-        # Format: Question 1: Đáp án A
+        # Định dạng: Question 1: Đáp án A
         ans_matches = re.finditer(r'Question (\d+)[^A-D]*Đáp án[:\s]*([A-D])', self.text)
         for m in ans_matches:
             q_num = int(m.group(1))
             ans_letter = m.group(2)
             answers[q_num] = ans_letter
 
-        # Format: Câu 1: Đáp án A
+        # Định dạng: Câu 1: Đáp án A
         ans_matches_cau = re.finditer(r'Câu (\d+)[:\s]*Đáp án[:\s]*([A-D])', self.text)
         for m in ans_matches_cau:
             q_num = int(m.group(1))
             ans_letter = m.group(2)
             answers[q_num] = ans_letter
             
-        # Match questions with answers
+        # Khớp câu hỏi với đáp án
         final_data = []
         for q in questions:
             if q['id'] in answers:

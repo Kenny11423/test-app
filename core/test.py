@@ -1,4 +1,5 @@
 import random
+import numpy as np
 from database.manager import db_manager
 from core.question import Question
 
@@ -24,7 +25,7 @@ class TestSession:
     def submit_answer(self, question_id, answer_id):
         self.user_answers[question_id] = answer_id
         
-        # Check if correct
+        # Kiểm tra xem có đúng không
         question = next((q for q in self.questions if q.id == question_id), None)
         if question:
             correct_answer = next((a for a in question.answers if a.is_correct), None)
@@ -58,3 +59,21 @@ class ResultHistory:
             ORDER BY tr.test_date DESC
         """
         return db_manager.fetch_all(query)
+
+class PerformanceAnalyzer:
+    @staticmethod
+    def calculate_stats(results):
+        if not results:
+            return None
+        
+        # Chuyển đổi điểm số thành tỷ lệ phần trăm (0-100)
+        scores = np.array([(res['score'] / res['total_questions']) * 100 for res in results])
+        
+        return {
+            'mean': float(np.mean(scores)),
+            'median': float(np.median(scores)),
+            'std_dev': float(np.std(scores)),
+            'max': float(np.max(scores)),
+            'min': float(np.min(scores)),
+            'count': int(len(scores))
+        }

@@ -1,3 +1,4 @@
+# File: ui/login.py - Giao diện người dùng cho chức năng đăng nhập và đăng ký.
 from PySide6.QtWidgets import (QWidget, QVBoxLayout, QLabel, QLineEdit, 
                              QPushButton, QMessageBox, QComboBox)
 from core.user import UserManager
@@ -87,7 +88,7 @@ class RegisterWidget(QWidget):
     def handle_register(self):
         username = self.username_input.text()
         password = self.password_input.text()
-        role = self.role_combo.currentData() # Use data instead of text
+        role = self.role_combo.currentData() # Sử dụng dữ liệu thay vì văn bản
         
         if not username or not password:
             QMessageBox.warning(self, "Lỗi", "Vui lòng nhập đầy đủ thông tin.")

@@ -1,3 +1,4 @@
+# File: ui/test_session.py - Giao diện thực hiện bài thi và nộp bài.
 from PySide6.QtWidgets import (QWidget, QVBoxLayout, QLabel, QPushButton, 
                              QRadioButton, QButtonGroup, QMessageBox)
 from PySide6.QtCore import QTimer
@@ -59,7 +60,7 @@ class TestSessionWidget(QWidget):
             q = self.session.questions[self.session.current_question_index]
             self.q_label.setText(f"Câu {self.session.current_question_index + 1}: {q.text}")
             
-            # Reset buttons
+            # Đặt lại các nút
             self.answer_group.setExclusive(False)
             for btn in self.answer_buttons:
                 btn.setChecked(False)

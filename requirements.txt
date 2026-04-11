@@ -1,4 +1,5 @@
 mysql-connector-python
 PySide6
 bcrypt
-pymupd
+pymupdf
+numpy

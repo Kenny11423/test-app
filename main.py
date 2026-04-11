@@ -1,3 +1,4 @@
+# File: main.py - Điểm khởi đầu của ứng dụng (Entry point).
 import sys
 import os
 from PySide6.QtWidgets import (QApplication, QMainWindow, QStackedWidget)
@@ -41,7 +42,7 @@ class MainWindow(QMainWindow):
     def ensure_db_config(self):
         if not os.path.exists("db.txt"):
             with open("db.txt", "w") as f:
-                # Default local settings: host, port, user, pass, db
+                # Thiết lập cục bộ mặc định: host, port, user, pass, db
                 f.write("localhost\n3306\nroot\n\ntest_prep_db\nONLINE")
 
     def handle_server_status(self, is_online):
@@ -49,7 +50,7 @@ class MainWindow(QMainWindow):
             if not self.user and self.central_widget.currentWidget() == self.offline_widget:
                 self.show_login()
         else:
-            # If we lose connection, go back to offline screen
+            # Nếu mất kết nối, quay lại màn hình ngoại tuyến
             self.user = None
             self.central_widget.setCurrentWidget(self.offline_widget)
 

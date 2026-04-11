@@ -1,4 +1,4 @@
-import subprocess
+# File: core/network.py - Xử lý kết nối và quản lý đường hầm Ngrok.
 import platform
 import json
 import urllib.request
@@ -65,22 +65,41 @@ class ServerStatusMonitor(QObject):
 
     def check_connection(self):
         config = self.get_db_config()
+        if not config:
+            if self.is_online:
+                self.is_online = False
+                self.status_changed.emit(False)
+            return
+
         ngrok_active = self.is_ngrok_running()
         
-        db_connected = False
-        if config and ngrok_active:
-            # 1. Try to get the LATEST ngrok address automatically
+        # 1. Nếu ngrok đang chạy cục bộ, tự động cập nhật cấu hình
+        if ngrok_active:
             ngrok_host, ngrok_port = self.get_ngrok_tunnel_address()
             if ngrok_host and ngrok_port:
-                config["host"] = ngrok_host
-                config["port"] = ngrok_port
-                
-            # 2. Try to connect with the (potentially updated) config
-            db_connected = db_manager.connect(**config)
-            if db_connected:
-                db_manager.run_schema("database/schema.sql")
+                # Nếu địa chỉ đã thay đổi, cập nhật file db.txt
+                if config["host"] != ngrok_host or config["port"] != ngrok_port:
+                    config["host"] = ngrok_host
+                    config["port"] = ngrok_port
+                    try:
+                        with open("db.txt", "w") as f:
+                            f.write(f"{ngrok_host}\n")
+                            f.write(f"{ngrok_port}\n")
+                            f.write(f"{config['user']}\n")
+                            f.write(f"{config['password']}\n")
+                            f.write(f"{config['database']}\n")
+                            f.write("ONLINE")
+                    except Exception as e:
+                        print(f"Error updating db.txt: {e}")
         
-        online = db_connected and ngrok_active
+        # 2. Try to connect with the current config (manual or auto-updated)
+        db_connected = db_manager.connect(**config)
+        if db_connected:
+            db_manager.run_schema("database/schema.sql")
+        
+        # The app is "online" if the database is connected.
+        # We don't strictly require ngrok to be running locally on the client laptop.
+        online = db_connected
         
         if online != self.is_online:
             self.is_online = online

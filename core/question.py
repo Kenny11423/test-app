@@ -1,3 +1,4 @@
+# File: core/question.py - Định nghĩa cấu trúc và logic cho các câu hỏi.
 from database.manager import db_manager
 
 class Category:
@@ -46,7 +47,7 @@ class Question:
 
     @staticmethod
     def add_question(category_id, text, difficulty, choices):
-        # choices is list of (text, is_correct)
+        # choices là danh sách các (nội dung, là_đáp_án_đúng)
         query = "INSERT INTO questions (category_id, text, difficulty) VALUES (%s, %s, %s)"
         cursor = db_manager.execute_query(query, (category_id, text, difficulty))
         if cursor:

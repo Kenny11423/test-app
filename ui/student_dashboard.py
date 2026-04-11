@@ -42,7 +42,7 @@ class StudentDashboard(QWidget):
         categories = Category.get_all()
         for cat in categories:
             item = QListWidgetItem(cat.name)
-            item.setData(32, cat.id) # 32 is a custom role
+            item.setData(32, cat.id) # 32 là một vai trò tùy chỉnh
             self.cat_list.addItem(item)
 
     def refresh_results(self):
