@@ -2,4 +2,5 @@ mysql-connector-python
 PySide6
 bcrypt
 pymupdf
-numpy
+numpypip install PyQtWebEngine
+matplotlib

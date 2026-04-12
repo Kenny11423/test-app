@@ -67,8 +67,12 @@ class MainWindow(QMainWindow):
     def apply_theme(self):
         if self.current_theme == "light":
             self.setStyleSheet(LIGHT_STYLE)
+            if hasattr(self, 'admin_dash'):
+                self.admin_dash.toggle_chart_theme('light')
         else:
             self.setStyleSheet(DARK_STYLE)
+            if hasattr(self, 'admin_dash'):
+                self.admin_dash.toggle_chart_theme('dark')
 
     def load_settings(self):
         if os.path.exists("settings.txt"):
