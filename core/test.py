@@ -11,7 +11,7 @@ class TestSession:
         self.questions = []
         self.current_question_index = 0
         self.score = 0
-        self.user_answers = {} # question_id: answer_id
+        self.user_answers = {} # mã_câu_hỏi: mã_câu_trả_lời
 
     def generate_test(self):
         all_questions = Question.get_by_category(self.category_id)

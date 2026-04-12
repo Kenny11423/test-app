@@ -15,7 +15,7 @@ class UserManager:
 
     @staticmethod
     def verify_password(password, hashed_password):
-        # Handle cases where hashed_password might be str or bytes/bytearray
+        # Xử lý các trường hợp hashed_password có thể là str hoặc bytes/bytearray
         if isinstance(hashed_password, str):
             hashed_password = hashed_password.encode('utf-8')
         elif isinstance(hashed_password, (bytearray, bytes)):

@@ -15,7 +15,7 @@ class ServerAdminApp(QMainWindow):
         self.setCentralWidget(self.central_widget)
         self.layout = QVBoxLayout(self.central_widget)
         
-        # Connection Settings
+        # Cấu hình kết nối
         self.layout.addWidget(QLabel("### Cấu hình kết nối MySQL"))
         
         self.host = QLineEdit("localhost")
@@ -36,7 +36,7 @@ class ServerAdminApp(QMainWindow):
         self.layout.addWidget(QLabel("Cơ sở dữ liệu (Database):"))
         self.layout.addWidget(self.database)
         
-        # Actions
+        # Các hành động
         h_layout = QHBoxLayout()
         self.test_btn = QPushButton("Kiểm tra kết nối")
         self.test_btn.clicked.connect(self.test_connection)

@@ -1,7 +1,7 @@
 # File: ui/test_session.py - Giao diện thực hiện bài thi và nộp bài.
 from PySide6.QtWidgets import (QWidget, QVBoxLayout, QLabel, QPushButton, 
-                             QRadioButton, QButtonGroup, QMessageBox)
-from PySide6.QtCore import QTimer
+                             QRadioButton, QButtonGroup, QMessageBox, QFrame, QHBoxLayout)
+from PySide6.QtCore import QTimer, Qt
 from core.test import TestSession
 
 class TestSessionWidget(QWidget):
@@ -11,7 +11,7 @@ class TestSessionWidget(QWidget):
         self.session.generate_test()
         self.on_test_complete = on_test_complete
         
-        self.time_left = self.session.num_questions * 60 # 1 minute per question
+        self.time_left = self.session.num_questions * 60
         self.timer = QTimer()
         self.timer.timeout.connect(self.update_timer)
         
@@ -20,28 +20,66 @@ class TestSessionWidget(QWidget):
         self.timer.start(1000)
 
     def init_ui(self):
-        self.layout = QVBoxLayout()
+        self.main_layout = QVBoxLayout(self)
+        self.main_layout.setContentsMargins(30, 30, 30, 30)
+        self.main_layout.setSpacing(20)
         
-        self.timer_label = QLabel(f"Thời gian còn lại: {self.format_time(self.time_left)}")
-        self.layout.addWidget(self.timer_label)
+        # Header với Timer
+        header_frame = QFrame()
+        header_frame.setObjectName("header_card")
+        header_layout = QHBoxLayout(header_frame)
+        
+        self.title_label = QLabel(f"Đang thi: {self.session.category_id}") # Có thể lấy tên thực tế nếu cần
+        self.title_label.setStyleSheet("font-weight: bold; font-size: 18px;")
+        
+        self.timer_label = QLabel(f"Thời gian: {self.format_time(self.time_left)}")
+        self.timer_label.setStyleSheet("font-size: 20px; font-weight: bold; color: #e74c3c;")
+        
+        header_layout.addWidget(self.title_label)
+        header_layout.addStretch()
+        header_layout.addWidget(self.timer_label)
+        self.main_layout.addWidget(header_frame)
+
+        # Câu hỏi Card
+        self.q_card = QFrame()
+        self.q_card.setFrameShape(QFrame.StyledPanel)
+        self.q_card.setObjectName("question_card")
+        self.q_layout = QVBoxLayout(self.q_card)
+        self.q_layout.setContentsMargins(20, 20, 20, 20)
+        self.q_layout.setSpacing(20)
 
         self.q_label = QLabel("")
         self.q_label.setWordWrap(True)
-        self.layout.addWidget(self.q_label)
+        self.q_label.setStyleSheet("font-size: 20px; font-weight: 500; line-height: 1.5;")
+        self.q_layout.addWidget(self.q_label)
 
         self.answer_group = QButtonGroup()
         self.answer_buttons = []
         for i in range(4):
             btn = QRadioButton("")
+            btn.setStyleSheet("padding: 10px; font-size: 16px;")
+            btn.setCursor(Qt.PointingHandCursor)
             self.answer_group.addButton(btn, i)
-            self.layout.addWidget(btn)
+            self.q_layout.addWidget(btn)
             self.answer_buttons.append(btn)
+        
+        self.main_layout.addWidget(self.q_card)
 
+        # Footer với nút điều hướng
+        footer_layout = QHBoxLayout()
+        self.progress_label = QLabel("")
+        self.progress_label.setStyleSheet("font-style: italic;")
+        
         self.next_btn = QPushButton("Câu tiếp theo")
+        self.next_btn.setFixedHeight(45)
+        self.next_btn.setMinimumWidth(150)
+        self.next_btn.setCursor(Qt.PointingHandCursor)
         self.next_btn.clicked.connect(self.handle_next)
-        self.layout.addWidget(self.next_btn)
-
-        self.setLayout(self.layout)
+        
+        footer_layout.addWidget(self.progress_label)
+        footer_layout.addStretch()
+        footer_layout.addWidget(self.next_btn)
+        self.main_layout.addLayout(footer_layout)
 
     def format_time(self, seconds):
         mins, secs = divmod(seconds, 60)
@@ -49,7 +87,7 @@ class TestSessionWidget(QWidget):
 
     def update_timer(self):
         self.time_left -= 1
-        self.timer_label.setText(f"Thời gian còn lại: {self.format_time(self.time_left)}")
+        self.timer_label.setText(f"Thời gian: {self.format_time(self.time_left)}")
         if self.time_left <= 0:
             self.timer.stop()
             QMessageBox.warning(self, "Hết giờ!", "Thời gian làm bài đã kết thúc.")
@@ -59,8 +97,13 @@ class TestSessionWidget(QWidget):
         if self.session.current_question_index < len(self.session.questions):
             q = self.session.questions[self.session.current_question_index]
             self.q_label.setText(f"Câu {self.session.current_question_index + 1}: {q.text}")
+            self.progress_label.setText(f"Tiến độ: {self.session.current_question_index + 1}/{len(self.session.questions)}")
             
-            # Đặt lại các nút
+            if self.session.current_question_index == len(self.session.questions) - 1:
+                self.next_btn.setText("Nộp bài")
+            else:
+                self.next_btn.setText("Câu tiếp theo")
+
             self.answer_group.setExclusive(False)
             for btn in self.answer_buttons:
                 btn.setChecked(False)

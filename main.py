@@ -9,14 +9,18 @@ from ui.student_dashboard import StudentDashboard
 from ui.test_session import TestSessionWidget
 from ui.offline import ServerOfflineWidget
 from core.network import ServerStatusMonitor
+from ui.styles import LIGHT_STYLE, DARK_STYLE
 
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
         self.setWindowTitle("Ứng dụng Ôn thi Trực tuyến")
-        self.resize(800, 600)
+        self.resize(1000, 750)
         
-        # Ensure db.txt exists with some defaults if it doesn't
+        # Cài đặt giao diện mặc định
+        self.current_theme = "light"
+        
+        # Đảm bảo db.txt tồn tại với một số mặc định nếu nó không tồn tại
         self.ensure_db_config()
 
         self.central_widget = QStackedWidget()
@@ -26,11 +30,17 @@ class MainWindow(QMainWindow):
         self.offline_widget = ServerOfflineWidget(self.check_server_connection)
         self.central_widget.addWidget(self.offline_widget)
         
-        # Setup Server Monitor
+        # Thêm nút chuyển đổi Theme vào Toolbar
+        self.setup_toolbar()
+        self.load_settings()
+        
+        self.apply_theme()
+        
+        # Thiết lập Giám sát Máy chủ
         self.monitor = ServerStatusMonitor()
         self.monitor.status_changed.connect(self.handle_server_status)
         
-        # Pre-check before showing UI
+        # Kiểm tra trước khi hiển thị giao diện người dùng (UI)
         self.monitor.check_connection()
         if self.monitor.is_online:
             self.show_login()
@@ -38,6 +48,43 @@ class MainWindow(QMainWindow):
             self.central_widget.setCurrentWidget(self.offline_widget)
             
         self.monitor.start()
+
+    def setup_toolbar(self):
+        self.toolbar = self.addToolBar("Main")
+        self.theme_action = self.toolbar.addAction("Chế độ Tối")
+        self.theme_action.triggered.connect(self.toggle_theme)
+
+    def toggle_theme(self):
+        if self.current_theme == "light":
+            self.current_theme = "dark"
+            self.theme_action.setText("Chế độ Sáng")
+        else:
+            self.current_theme = "light"
+            self.theme_action.setText("Chế độ Tối")
+        self.apply_theme()
+        self.save_settings()
+
+    def apply_theme(self):
+        if self.current_theme == "light":
+            self.setStyleSheet(LIGHT_STYLE)
+        else:
+            self.setStyleSheet(DARK_STYLE)
+
+    def load_settings(self):
+        if os.path.exists("settings.txt"):
+            with open("settings.txt", "r") as f:
+                self.current_theme = f.read().strip() or "light"
+        
+        # Cập nhật văn bản nút sau khi load
+        if hasattr(self, 'theme_action'):
+            if self.current_theme == "dark":
+                self.theme_action.setText("Chế độ Sáng")
+            else:
+                self.theme_action.setText("Chế độ Tối")
+
+    def save_settings(self):
+        with open("settings.txt", "w") as f:
+            f.write(self.current_theme)
 
     def ensure_db_config(self):
         if not os.path.exists("db.txt"):

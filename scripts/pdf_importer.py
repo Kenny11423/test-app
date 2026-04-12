@@ -15,23 +15,23 @@ class PDFTestParser:
         return text
 
     def parse(self):
-        # This is a complex task because the PDF has multiple tests and keys.
-        # We will look for Questions and their corresponding Answers.
+        # Đây là một nhiệm vụ phức tạp vì tệp PDF có nhiều bài kiểm tra và đáp án.
+        # Chúng tôi sẽ tìm kiếm các Câu hỏi và Đáp án tương ứng của chúng.
         
-        # 1. Extract all questions and their choices
-        # Pattern: Question \d+[.:] (.*?) A\. (.*?) B\. (.*?) C\. (.*?) D\. (.*?)
-        # Note: Choices might be separated by newlines or spaces.
+        # 1. Trích xuất tất cả các câu hỏi và các lựa chọn của chúng
+        # Mẫu: Question \d+[.:] (.*?) A\. (.*?) B\. (.*?) C\. (.*?) D\. (.*?)
+        # Lưu ý: Các lựa chọn có thể được phân tách bằng dòng mới hoặc khoảng trắng.
         
-        # Let's try to split the text into blocks starting with "Question"
+        # Hãy thử chia văn bản thành các khối bắt đầu bằng "Question"
         question_blocks = re.split(r'Question \d+[.(]?[A-Z]{0,3}[)]?[.:]', self.text)
-        # The first block is usually header text
+        # Khối đầu tiên thường là văn bản tiêu đề
         header = question_blocks[0]
         question_blocks = question_blocks[1:]
         
         questions = []
         for i, block in enumerate(question_blocks):
-            # Try to find options A, B, C, D
-            # We use a greedy match for the question text until we hit "A."
+            # Thử tìm các tùy chọn A, B, C, D
+            # Chúng tôi sử dụng khớp tham lam cho văn bản câu hỏi cho đến khi gặp "A."
             match = re.search(r'(?s)(.*?)\s*A\.\s*(.*?)\s*B\.\s*(.*?)\s*C\.\s*(.*?)\s*D\.\s*(.*?)(?=\n|$|Question|\d+\.)', block)
             if match:
                 q_text = match.group(1).strip()
@@ -46,8 +46,8 @@ class PDFTestParser:
                     'choices': [choice_a, choice_b, choice_c, choice_d]
                 })
 
-        # 2. Extract Answer Keys
-        # Pattern: Question \d+[.:]?\s*Đáp án[:\s]*([A-D])
+        # 2. Trích xuất Đáp án
+        # Mẫu: Question \d+[.:]?\s*Đáp án[:\s]*([A-D])
         answers = {}
         ans_matches = re.finditer(r'Question (\d+)[^A-D]*Đáp án[:\s]*([A-D])', self.text)
         for m in ans_matches:
@@ -55,19 +55,19 @@ class PDFTestParser:
             ans_letter = m.group(2)
             answers[q_num] = ans_letter
 
-        # Also search for "Câu \d+: Đáp án [A-D]"
+        # Đồng thời tìm kiếm "Câu \d+: Đáp án [A-D]"
         ans_matches_cau = re.finditer(r'Câu (\d+)[:\s]*Đáp án[:\s]*([A-D])', self.text)
         for m in ans_matches_cau:
             q_num = int(m.group(1))
             ans_letter = m.group(2)
             answers[q_num] = ans_letter
             
-        # Match questions with answers
+        # Khớp câu hỏi với đáp án
         final_data = []
         for q in questions:
             if q['id'] in answers:
                 correct_letter = answers[q['id']]
-                # Map A->0, B->1, C->2, D->3
+                # Ánh xạ A->0, B->1, C->2, D->3
                 correct_idx = ord(correct_letter) - ord('A')
                 final_data.append({
                     'text': q['text'],
@@ -87,7 +87,7 @@ def update_db_with_pdf(pdf_path, category_id):
         for i, choice_text in enumerate(item['choices']):
             choices.append((choice_text, i == item['correct_idx']))
         
-        # Assuming difficulty is 'Medium' for now
+        # Hiện tại giả định độ khó là 'Medium'
         from core.question import Question
         if Question.add_question(category_id, item['text'], 'Medium', choices):
             success_count += 1

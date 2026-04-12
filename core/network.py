@@ -34,13 +34,13 @@ class ServerStatusMonitor(QObject):
             return False
 
     def get_ngrok_tunnel_address(self):
-        """Fetches the current active TCP tunnel from ngrok's local API."""
+        """Lấy địa chỉ tunnel TCP hiện tại từ API cục bộ của ngrok."""
         try:
             with urllib.request.urlopen("http://127.0.0.1:4040/api/tunnels", timeout=2) as response:
                 data = json.loads(response.read().decode())
                 for tunnel in data.get('tunnels', []):
                     if tunnel.get('proto') == 'tcp':
-                        # Example public_url: tcp://0.tcp.ap.ngrok.io:12345
+                        # Ví dụ public_url: tcp://0.tcp.ap.ngrok.io:12345
                         addr = tunnel.get('public_url').replace('tcp://', '').split(':')
                         return addr[0], int(addr[1])
         except Exception:
@@ -92,13 +92,16 @@ class ServerStatusMonitor(QObject):
                     except Exception as e:
                         print(f"Error updating db.txt: {e}")
         
-        # 2. Try to connect with the current config (manual or auto-updated)
+        # 2. Thử kết nối với cấu hình hiện tại (thủ công hoặc tự động cập nhật)
         db_connected = db_manager.connect(**config)
-        if db_connected:
-            db_manager.run_schema("database/schema.sql")
         
-        # The app is "online" if the database is connected.
-        # We don't strictly require ngrok to be running locally on the client laptop.
+        # Chỉ chạy schema nếu là lần đầu tiên kết nối thành công trong phiên này
+        if db_connected and not hasattr(self, '_schema_initialized'):
+            db_manager.run_schema("database/schema.sql")
+            self._schema_initialized = True
+        
+        # Ứng dụng ở trạng thái "trực tuyến" nếu cơ sở dữ liệu đã được kết nối.
+        # Chúng tôi không yêu cầu nghiêm ngặt ngrok phải chạy cục bộ trên máy tính xách tay của khách hàng.
         online = db_connected
         
         if online != self.is_online:
