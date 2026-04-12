@@ -101,7 +101,7 @@ class PDFTestParser:
         
         return final_data
 
-def update_db_with_pdf(pdf_path, category_id):
+def update_db_with_pdf(pdf_path, category_id, grade):
     parser = PDFTestParser(pdf_path)
     test_data = parser.parse()
     
@@ -116,7 +116,7 @@ def update_db_with_pdf(pdf_path, category_id):
         for i, choice_text in enumerate(item['choices']):
             choices.append((choice_text, i == item['correct_idx']))
         
-        if Question.add_question(category_id, item['text'], 'Medium', choices):
+        if Question.add_question(category_id, grade, item['text'], 'Medium', choices):
             success_count += 1
             
     return success_count

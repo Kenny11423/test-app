@@ -4,17 +4,18 @@ from database.manager import db_manager
 from core.question import Question
 
 class TestSession:
-    def __init__(self, user_id, category_id, num_questions=10):
+    def __init__(self, user_id, category_id, grade, num_questions=10):
         self.user_id = user_id
         self.category_id = category_id
+        self.grade = grade
         self.num_questions = num_questions
         self.questions = []
         self.current_question_index = 0
         self.score = 0
-        self.user_answers = {} # mã_câu_hỏi: mã_câu_trả_lời
+        self.user_answers = {}
 
     def generate_test(self):
-        all_questions = Question.get_by_category(self.category_id)
+        all_questions = Question.get_by_category(self.category_id, self.grade)
         if len(all_questions) > self.num_questions:
             self.questions = random.sample(all_questions, self.num_questions)
         else:
@@ -24,8 +25,6 @@ class TestSession:
 
     def submit_answer(self, question_id, answer_id):
         self.user_answers[question_id] = answer_id
-        
-        # Kiểm tra xem có đúng không
         question = next((q for q in self.questions if q.id == question_id), None)
         if question:
             correct_answer = next((a for a in question.answers if a.is_correct), None)
@@ -33,8 +32,10 @@ class TestSession:
                 self.score += 1
 
     def finalize_test(self):
-        query = "INSERT INTO test_results (user_id, category_id, score, total_questions) VALUES (%s, %s, %s, %s)"
-        db_manager.execute_query(query, (self.user_id, self.category_id, self.score, self.num_questions))
+        query = "INSERT INTO test_results (user_id, category_id, grade, score, total_questions) VALUES (%s, %s, %s, %s, %s)"
+        cursor = db_manager.execute_query(query, (self.user_id, self.category_id, self.grade, self.score, self.num_questions))
+        if cursor and hasattr(cursor, '_pool_conn'):
+            cursor._pool_conn.close()
         return self.score, self.num_questions
 
 class ResultHistory:

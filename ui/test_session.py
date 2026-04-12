@@ -5,9 +5,9 @@ from PySide6.QtCore import QTimer, Qt
 from core.test import TestSession
 
 class TestSessionWidget(QWidget):
-    def __init__(self, user_id, category_id, on_test_complete):
+    def __init__(self, user_id, category_id, grade, on_test_complete):
         super().__init__()
-        self.session = TestSession(user_id, category_id)
+        self.session = TestSession(user_id, category_id, grade)
         self.session.generate_test()
         self.on_test_complete = on_test_complete
         

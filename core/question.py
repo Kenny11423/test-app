@@ -22,13 +22,17 @@ class Category:
     @staticmethod
     def add(name, description):
         query = "INSERT INTO categories (name, description) VALUES (%s, %s)"
-        db_manager.execute_query(query, (name, description))
+        cursor = db_manager.execute_query(query, (name, description))
+        if cursor and hasattr(cursor, '_pool_conn'):
+            cursor._pool_conn.close()
         Category._cache = None
 
     @staticmethod
     def update(cat_id, name, description):
         query = "UPDATE categories SET name = %s, description = %s WHERE id = %s"
-        db_manager.execute_query(query, (name, description, cat_id))
+        cursor = db_manager.execute_query(query, (name, description, cat_id))
+        if cursor and hasattr(cursor, '_pool_conn'):
+            cursor._pool_conn.close()
         Category._cache = None
         return True
 
@@ -39,32 +43,38 @@ class Answer:
         self.is_correct = is_correct
 
 class Question:
-    def __init__(self, id, category_id, text, difficulty, answers=None):
+    def __init__(self, id, category_id, grade, text, difficulty, answers=None):
         self.id = id
         self.category_id = category_id
+        self.grade = grade
         self.text = text
         self.difficulty = difficulty
         self.answers = answers or []
 
     @staticmethod
-    def get_by_category(category_id):
-        # Sử dụng JOIN để lấy toàn bộ câu hỏi và đáp án trong 1 lần truy vấn duy nhất
+    def get_by_category(category_id, grade=None):
+        # Sử dụng JOIN để lấy toàn bộ câu hỏi và đáp án
         query = """
-            SELECT q.id as q_id, q.category_id, q.text as q_text, q.difficulty,
+            SELECT q.id as q_id, q.category_id, q.grade, q.text as q_text, q.difficulty,
                    a.id as a_id, a.text as a_text, a.is_correct
             FROM questions q
             LEFT JOIN answers a ON q.id = a.question_id
             WHERE q.category_id = %s
-            ORDER BY q.id
         """
-        data = db_manager.fetch_all(query, (category_id,))
+        params = [category_id]
+        if grade is not None:
+            query += " AND q.grade = %s"
+            params.append(grade)
+            
+        query += " ORDER BY q.id"
+        data = db_manager.fetch_all(query, tuple(params))
         
         questions_dict = {}
         for row in data:
             q_id = row['q_id']
             if q_id not in questions_dict:
                 questions_dict[q_id] = Question(
-                    q_id, row['category_id'], row['q_text'], row['difficulty']
+                    q_id, row['category_id'], row['grade'], row['q_text'], row['difficulty']
                 )
             
             if row['a_id']:
@@ -74,33 +84,46 @@ class Question:
         return list(questions_dict.values())
 
     @staticmethod
-    def add_question(category_id, text, difficulty, choices):
+    def add_question(category_id, grade, text, difficulty, choices):
         # choices là danh sách các (nội dung, là_đáp_án_đúng)
-        query = "INSERT INTO questions (category_id, text, difficulty) VALUES (%s, %s, %s)"
-        cursor = db_manager.execute_query(query, (category_id, text, difficulty))
+        query = "INSERT INTO questions (category_id, grade, text, difficulty) VALUES (%s, %s, %s, %s)"
+        cursor = db_manager.execute_query(query, (category_id, grade, text, difficulty))
         if cursor:
             question_id = cursor.lastrowid
-            for text, is_correct in choices:
+            if hasattr(cursor, '_pool_conn'):
+                cursor._pool_conn.close() # Đóng kết nối của INSERT question
+            
+            for a_text, is_correct in choices:
                 ans_query = "INSERT INTO answers (question_id, text, is_correct) VALUES (%s, %s, %s)"
-                db_manager.execute_query(ans_query, (question_id, text, is_correct))
+                ans_cursor = db_manager.execute_query(ans_query, (question_id, a_text, is_correct))
+                if ans_cursor and hasattr(ans_cursor, '_pool_conn'):
+                    ans_cursor._pool_conn.close()
             return True
         return False
 
     @staticmethod
     def delete(question_id):
         query = "DELETE FROM questions WHERE id = %s"
-        db_manager.execute_query(query, (question_id,))
+        cursor = db_manager.execute_query(query, (question_id,))
+        if cursor and hasattr(cursor, '_pool_conn'):
+            cursor._pool_conn.close()
         return True
 
     @staticmethod
-    def update_question(question_id, category_id, text, difficulty, choices):
-        # choices là danh sách các (nội dung_đáp_án, là_đúng)
-        query = "UPDATE questions SET category_id = %s, text = %s, difficulty = %s WHERE id = %s"
-        db_manager.execute_query(query, (category_id, text, difficulty, question_id))
+    def update_question(question_id, category_id, grade, text, difficulty, choices):
+        query = "UPDATE questions SET category_id = %s, grade = %s, text = %s, difficulty = %s WHERE id = %s"
+        cursor = db_manager.execute_query(query, (category_id, grade, text, difficulty, question_id))
+        if cursor and hasattr(cursor, '_pool_conn'):
+            cursor._pool_conn.close()
         
-        # Xóa đáp án cũ và thêm mới (đơn giản nhất)
-        db_manager.execute_query("DELETE FROM answers WHERE question_id = %s", (question_id,))
+        # Xóa đáp án cũ và thêm mới
+        cursor = db_manager.execute_query("DELETE FROM answers WHERE question_id = %s", (question_id,))
+        if cursor and hasattr(cursor, '_pool_conn'):
+            cursor._pool_conn.close()
+
         for a_text, is_correct in choices:
             ans_query = "INSERT INTO answers (question_id, text, is_correct) VALUES (%s, %s, %s)"
-            db_manager.execute_query(ans_query, (question_id, a_text, is_correct))
+            cursor = db_manager.execute_query(ans_query, (question_id, a_text, is_correct))
+            if cursor and hasattr(cursor, '_pool_conn'):
+                cursor._pool_conn.close()
         return True

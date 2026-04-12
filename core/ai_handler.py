@@ -1,12 +1,11 @@
-# File: core/ai_handler.py - Xử lý tạo câu hỏi tự động bằng Gemini AI.
-import google.generativeai as genai
+# File: core/ai_handler.py - Xử lý tạo câu hỏi tự động bằng Gemini AI (Sử dụng SDK mới google-genai).
+from google import genai
 import json
 import re
 
 class AIGenerator:
     def __init__(self, api_key):
-        genai.configure(api_key=api_key)
-        self.model = genai.GenerativeModel('gemini-1.5-flash')
+        self.client = genai.Client(api_key=api_key)
 
     def generate_questions(self, topic, num_questions=5, difficulty='Medium'):
         prompt = f"""
@@ -29,13 +28,18 @@ class AIGenerator:
         """
         
         try:
-            response = self.model.generate_content(prompt)
-            # Trích xuất JSON từ phản hồi (đôi khi AI bao bọc bởi ```json ... ```)
+            # Sử dụng SDK mới và model khả dụng ổn định (Gemini Flash Latest)
+            response = self.client.models.generate_content(
+                model='gemini-flash-latest',
+                contents=prompt
+            )
+            
             text = response.text
+            # Trích xuất JSON từ phản hồi
             json_match = re.search(r'\[.*\]', text, re.DOTALL)
             if json_match:
                 return json.loads(json_match.group(0))
             return None
         except Exception as e:
-            print(f"Lỗi Gemini AI: {e}")
+            print(f"Lỗi Gemini AI (google-genai): {e}")
             return None

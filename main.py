@@ -142,8 +142,8 @@ class MainWindow(QMainWindow):
         self.central_widget.addWidget(self.student_dash)
         self.central_widget.setCurrentWidget(self.student_dash)
 
-    def start_test(self, category_id):
-        self.test_widget = TestSessionWidget(self.user.id, category_id, self.show_student_dashboard)
+    def start_test(self, category_id, grade):
+        self.test_widget = TestSessionWidget(self.user.id, category_id, grade, self.show_student_dashboard)
         self.central_widget.addWidget(self.test_widget)
         self.central_widget.setCurrentWidget(self.test_widget)
 
