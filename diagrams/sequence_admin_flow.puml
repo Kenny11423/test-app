@@ -1,0 +1,72 @@
+@startuml
+actor Admin
+actor "Server Admin" as SA
+participant "server_admin.py" as ServerApp
+participant "db.txt" as Config
+participant "MainWindow" as Main
+participant "LoginWidget" as Login
+participant "UserManager" as UM
+participant "AdminDashboard" as Dash
+participant "Category" as Cat
+participant "Question" as Q
+participant "PDF Handler" as PDF
+participant "AI Handler" as AI
+participant "ResultHistory" as RH
+
+SA -> ServerApp: Mở màn hình cấu hình server
+SA -> ServerApp: Nhập host/port/user/password/database
+SA -> ServerApp: Kiểm tra kết nối
+SA -> ServerApp: Lưu trạng thái ONLINE/OFFLINE
+ServerApp -> Config: Ghi cấu hình db.txt
+
+Admin -> Main: Mở ứng dụng
+Main -> Config: Đọc cấu hình
+Main -> Login: Hiển thị màn hình đăng nhập
+Admin -> Login: Nhập tài khoản admin
+Login -> UM: login_user()
+UM --> Login: user Admin
+Login -> Main: on_login_success(user)
+Main -> Dash: show_admin_dashboard()
+
+group Quản lý môn học
+  Admin -> Dash: Thêm môn học
+  Dash -> Cat: create / get_all(force_refresh=True)
+  Cat --> Dash: Danh sách môn học cập nhật
+end
+
+group Thêm câu hỏi thủ công
+  Admin -> Dash: Nhập nội dung + đáp án + độ khó
+  Dash -> Q: create_question(...)
+  Q --> Dash: Kết quả lưu
+end
+
+group Nhập từ PDF
+  Admin -> Dash: Chọn file PDF
+  Dash -> PDF: extract_questions(...)
+  PDF --> Dash: Danh sách câu hỏi
+  Dash -> Q: save_imported_questions(...)
+end
+
+group Tạo bằng AI
+  Admin -> Dash: Nhập chủ đề, số lượng, độ khó, API key
+  Dash -> AI: generate_questions(...)
+  AI --> Dash: Bộ câu hỏi AI
+  Dash -> Q: save_generated_questions(...)
+end
+
+group Quản lý đề thi
+  Admin -> Dash: Chọn môn và lớp
+  Dash -> Q: get_by_category(cat_id, grade)
+  Q --> Dash: Danh sách câu hỏi
+  Admin -> Dash: Sửa hoặc xóa câu hỏi
+  Dash -> Q: update_question(...) / delete_question(...)
+end
+
+group Thống kê và xuất kết quả
+  Dash -> RH: get_all_results / aggregate stats
+  RH --> Dash: Dữ liệu thống kê
+  Admin -> Dash: Xuất CSV
+  Dash -> RH: export_to_csv(...)
+end
+
+@enduml

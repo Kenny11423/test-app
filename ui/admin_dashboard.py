@@ -275,14 +275,14 @@ class AdminDashboard(QWidget):
             if not key:
                 QMessageBox.warning(self, "Lỗi", "Vui lòng nhập Gemini API Key!")
                 return
-            self.ai_btn.setEnabled(False); self.ai_btn.setText("⏳...");
+            self.ai_btn.setEnabled(False); self.ai_btn.setText("...");
             def run():
                 from core.ai_handler import AIGenerator
                 return AIGenerator(key).generate_questions(f"{topic} lớp {grade}", num, diff)
             self.ai_loader = DataLoader(run); self.ai_loader.data_loaded.connect(lambda d: self.on_ai_gen(d, cat_id, grade, diff)); self.ai_loader.start()
 
     def on_ai_gen(self, data, cat_id, grade, diff):
-        self.ai_btn.setEnabled(True); self.ai_btn.setText("✨ Tạo bằng AI")
+        self.ai_btn.setEnabled(True); self.ai_btn.setText("Tạo bằng AI")
         if not data:
             QMessageBox.warning(self, "Lỗi", "Không thể tạo câu hỏi. Vui lòng kiểm tra API Key hoặc nội dung yêu cầu.")
             return

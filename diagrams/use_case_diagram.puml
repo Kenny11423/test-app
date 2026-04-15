@@ -1,0 +1,67 @@
+@startuml
+left to right direction
+skinparam packageStyle rectangle
+skinparam shadowing false
+skinparam actorStyle awesome
+
+actor Student as S
+actor Admin as A
+actor "Server Admin" as SA
+actor "Hệ thống" as SYS
+
+rectangle "Test Prep App Online" {
+  usecase "Kiểm tra trạng thái\nmáy chủ" as UC1
+  usecase "Đăng ký tài khoản" as UC2
+  usecase "Đăng nhập" as UC3
+  usecase "Đăng xuất" as UC4
+
+  usecase "Xem danh sách môn học\nvà đề thi" as UC5
+  usecase "Bắt đầu làm bài thi" as UC6
+  usecase "Trả lời câu hỏi\nvà nộp bài" as UC7
+  usecase "Xem lịch sử kết quả" as UC8
+
+  usecase "Quản lý môn học" as UC9
+  usecase "Thêm câu hỏi thủ công" as UC10
+  usecase "Nhập câu hỏi từ PDF" as UC11
+  usecase "Tạo câu hỏi bằng AI" as UC12
+  usecase "Quản lý đề thi / câu hỏi" as UC13
+  usecase "Xem thống kê kết quả" as UC14
+  usecase "Xuất kết quả ra CSV" as UC15
+
+  usecase "Cấu hình máy chủ" as UC16
+  usecase "Khởi tạo cơ sở dữ liệu" as UC17
+  usecase "Bật/Tắt trạng thái\nONLINE/OFFLINE" as UC18
+}
+
+SYS --> UC1
+
+S --> UC2
+S --> UC3
+S --> UC4
+S --> UC5
+S --> UC6
+S --> UC7
+S --> UC8
+
+A --> UC2
+A --> UC3
+A --> UC4
+A --> UC9
+A --> UC10
+A --> UC11
+A --> UC12
+A --> UC13
+A --> UC14
+A --> UC15
+
+SA --> UC16
+SA --> UC17
+SA --> UC18
+
+UC6 ..> UC5 : <<include>>
+UC7 ..> UC6 : <<extend>>
+UC10 ..> UC9 : <<include>>
+UC17 ..> UC16 : <<include>>
+UC18 ..> UC16 : <<include>>
+
+@enduml

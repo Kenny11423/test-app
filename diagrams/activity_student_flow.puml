@@ -1,0 +1,67 @@
+@startuml
+start
+
+:Khởi động ứng dụng;
+:Hệ thống kiểm tra trạng thái server;
+
+if (Server online?) then (Có)
+  :Hiển thị màn hình đăng nhập;
+else (Không)
+  :Hiển thị màn hình offline;
+  :Người dùng bấm thử kết nối lại;
+  :Kiểm tra lại server;
+  if (Kết nối thành công?) then (Có)
+    :Hiển thị màn hình đăng nhập;
+  else (Không)
+    stop
+  endif
+endif
+
+:Người dùng nhập tài khoản;
+if (Thông tin hợp lệ?) then (Có)
+  :Xác thực đăng nhập;
+else (Không)
+  :Thông báo lỗi;
+  stop
+endif
+
+if (Đăng nhập thành công?) then (Có)
+  :Mở Student Dashboard;
+else (Không)
+  :Thông báo sai tài khoản hoặc mật khẩu;
+  stop
+endif
+
+:Tải danh sách môn học;
+:Chọn môn học và khối lớp;
+
+if (Có câu hỏi?) then (Có)
+  :Hiển thị bài thi khả dụng;
+else (Không)
+  :Thông báo chưa có câu hỏi;
+  stop
+endif
+
+:Bấm Bắt đầu thi;
+:Sinh bộ đề và khởi động bộ đếm thời gian;
+
+while (Còn câu hỏi?) is (Có)
+  :Hiển thị câu hỏi hiện tại;
+  :Sinh viên chọn đáp án;
+  if (Đã chọn đáp án?) then (Có)
+    :Lưu câu trả lời;
+    :Chuyển sang câu tiếp theo;
+  else (Không)
+    :Yêu cầu chọn đáp án;
+  endif
+endwhile (Không)
+
+:Nộp bài hoặc hết giờ;
+:Chấm điểm;
+:Lưu kết quả;
+:Hiển thị điểm số;
+:Quay lại Student Dashboard;
+:Tải lịch sử kết quả;
+
+stop
+@enduml

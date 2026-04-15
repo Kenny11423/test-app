@@ -1,0 +1,25 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Environment
+.env
+venv/
+env/
+.venv/
+
+# Build and Distribution
+build/
+dist/
+*.spec
+
+# IDEs
+.vscode/
+.idea/
+
+# Large files (optional)
+*.pdf
+*.pptx
+*.zip
+*.pkg

@@ -2,31 +2,26 @@
 
 Ứng dụng ôn thi trắc nghiệm chuyên nghiệp, hoạt động mượt mà như một ứng dụng web. Yêu cầu kết nối với máy chủ MySQL để hoạt động và xử lý linh hoạt trạng thái "Ngoại tuyến" (Offline).
 
-##  Tính Năng Chính
-- **Giám Sát Thời Gian Thực**: Tự động phát hiện khi máy chủ trực tuyến/ngoại tuyến và chuyển đổi giao diện tương ứng.
-- **Tích Hợp AI (Gemini)**: Tự động tạo câu hỏi trắc nghiệm thông minh theo chủ đề và độ khó yêu cầu bằng công nghệ AI của Google.
-- **Nhập Dữ Liệu Từ PDF**: Hỗ trợ trích xuất và nhập câu hỏi tự động từ các tệp đề thi PDF.
-- **Đa Nền Tảng**: Thiết kế để kết nối với bất kỳ máy chủ MySQL nào (Localhost, Cloud hoặc Mạng nội bộ).
-- **Phân Quyền Người Dùng**:
-  - **Admin (Quản trị viên)**: Quản lý danh mục, tạo/sửa câu hỏi, nhập từ PDF, tạo câu hỏi bằng AI và xuất kết quả sinh viên ra CSV.
-  - **Student (Sinh viên)**: Làm bài thi tính giờ, xem lịch sử làm bài và nhận kết quả tức thì.
-- **Bảo Mật**: Mã hóa mật khẩu bằng thư viện `bcrypt`.
+## 🌟 Key Features
+- **Web-Like Connectivity**: The app remains on a "Server Offline" page until it can successfully reach the database host.
+- **Real-Time Monitoring**: Automatically detects when the server goes online/offline and transitions the UI accordingly.
+- **Multi-Platform Ready**: Designed to connect to any MySQL host (Localhost, Cloud, or Local Network).
+- **Role-Based Access**:
+  - **Admin**: Manage categories, create questions, and export student results to CSV.
+  - **Student**: Take timed tests, view performance history, and get instant scoring.
+- **Secure Auth**: Password hashing using `bcrypt`.
 
-##  Cấu Trúc Dự Án
-- `main.py`: **Client Chính.** Giám sát file `db.txt` và máy chủ MySQL. Chỉ cho phép đăng nhập khi Admin đã "Xuất bản" ứng dụng và kết nối được database.
-- `server_admin.py`: **Bảng Điều Khiển.** Dùng để cấu hình MySQL, khởi tạo schema database và bật/tắt trạng thái ứng dụng (Online/Offline).
-- `core/`:
-    - `ai_handler.py`: Xử lý tạo câu hỏi tự động bằng Gemini AI.
-    - `pdf_handler.py`: Xử lý đọc và trích xuất nội dung từ tệp PDF.
-    - `network.py`: Giám sát trạng thái kết nối máy chủ trong nền.
-    - `question.py`, `test.py`, `user.py`: Các logic nghiệp vụ về câu hỏi, bài thi và người dùng.
-- `database/manager.py`: Xử lý kết nối và truy vấn MySQL (Singleton).
-- `ui/`: Các thành phần giao diện (Login, Admin Dashboard, Student Dashboard, Offline screen).
-- `scripts/`: Các công cụ hỗ trợ như nhập liệu PDF (`pdf_importer.py`), thiết lập danh mục (`setup_categories.py`).
+## 🏗️ Project Architecture
+- `server_admin.py`: **The Control Panel.** Use this to configure MySQL settings, initialize the database schema, and "Publish" the app (toggle Online/Offline).
+- `main.py`: **The Main Client.** This app monitors `db.txt` and the MySQL server. it only allows login when the Server Admin has published the app and the database is reachable.
+- `database/manager.py`: Singleton MySQL connection and query handler.
+- `core/network.py`: Background monitor for server and status availability.
+- `ui/offline.py`: Dedicated "Server is not online" interface.
+- `ui/`: Modular UI components for Login, Admin, and Student dashboards.
 
-##  Cài Đặt & Thiết Lập
+## 🚀 Setup & Installation
 
-### 1. Yêu cầu hệ thống
+### 1. Prerequisites
 - Python 3.8+
 - Máy chủ MySQL (Local hoặc Remote)
 - API Key của Google Gemini (nếu muốn dùng tính năng AI)
@@ -40,23 +35,27 @@ Các thư viện chính bao gồm: `mysql-connector-python`, `PySide6`, `bcrypt`
 ### 3. Cấu hình AI (Tùy chọn)
 Tạo tệp `ai_key.txt` ở thư mục gốc và dán API Key của Google Gemini vào đó.
 
-### 4. Chạy ứng dụng
-Chạy ứng dụng chính:
+### 4. Running the Main App
+1. Once the server is published, run the main app:
    ```bash
    python main.py
    ```
+2. The app will automatically detect the settings from `db.txt` and transition from the "Offline" screen to the Login screen.
 
-### Tính Năng Của Admin
-1. Đăng ký tài khoản với vai trò **Admin**.
-2. Quản lý **Danh mục** (VD: Tiếng Anh, Lập trình).
-3. Thêm câu hỏi:
-   - Nhập thủ công.
-   - Sử dụng **AI Generator** để tạo câu hỏi tự động theo chủ đề.
-   - Sử dụng **PDF Importer** để nhập từ tệp PDF có sẵn.
-4. Xem và xuất kết quả của sinh viên.
+## 📖 How to Use
 
-### Tính Năng Của Sinh Viên
-1. Đăng ký tài khoản với vai trò **Student**.
-2. Chọn danh mục và nhấn **Bắt đầu làm bài**.
-3. Hoàn thành bài thi trước khi **Đồng hồ đếm ngược** kết thúc.
-4. Xem lại lịch sử và tiến độ trong mục **Kết quả cũ**.
+### Handling "Server Offline"
+- If `main.py` shows **"Server is not online"**, it means either the MySQL server is down OR the app has been set to **OFFLINE** in the `server_admin.py` dashboard.
+- Use `server_admin.py` to toggle the visibility.
+
+### Admin Tasks
+1. Register an account with the **Admin** role.
+2. Create **Categories** (e.g., Python, Mathematics).
+3. Add **Questions** to categories with 4 choices and 1 correct answer.
+4. View/Export results from the **Student Results** section.
+
+### Student Tasks
+1. Register an account with the **Student** role.
+2. Select a category and click **Start Test**.
+3. Complete the test before the **Timer** expires.
+4. View your progress in the **Past Results** list.

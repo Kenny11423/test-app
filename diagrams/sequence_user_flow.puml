@@ -1,0 +1,53 @@
+@startuml
+actor User
+participant "MainWindow" as Main
+participant "ServerStatusMonitor" as Monitor
+participant "LoginWidget" as Login
+participant "UserManager" as UM
+participant "StudentDashboard" as Dash
+participant "Category/Question" as CQ
+participant "TestSessionWidget" as TestUI
+participant "TestSession" as Session
+participant "ResultHistory" as RH
+
+User -> Main: Khởi động ứng dụng
+Main -> Monitor: check_connection()
+Monitor --> Main: is_online / is_offline
+
+alt Server online
+  Main -> Login: show_login()
+else Server offline
+  Main -> User: Hiển thị ServerOfflineWidget
+end
+
+User -> Login: Nhập username/password
+Login -> UM: login_user(username, password)
+UM --> Login: user / null
+
+alt Đăng nhập thành công vai trò Student
+  Login -> Main: on_login_success(user)
+  Main -> Dash: show_student_dashboard()
+  Dash -> CQ: Category.get_all()
+  CQ --> Dash: Danh sách môn học
+  User -> Dash: Chọn môn + lớp + Bắt đầu thi
+  Dash -> Main: on_start_test(category_id, grade)
+  Main -> TestUI: start_test(...)
+  TestUI -> Session: generate_test()
+  Session --> TestUI: questions
+
+  loop Mỗi câu hỏi
+    User -> TestUI: Chọn đáp án + Next
+    TestUI -> Session: submit_answer(question_id, answer_id)
+  end
+
+  TestUI -> Session: finalize_test()
+  Session --> TestUI: score, total
+  TestUI -> Main: on_test_complete()
+  Main -> Dash: show_student_dashboard()
+  Dash -> RH: get_user_results(user.id)
+  RH --> Dash: Danh sách kết quả
+else Đăng nhập thất bại
+  Login -> User: Hiển thị thông báo lỗi
+end
+
+@enduml
