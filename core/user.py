@@ -40,3 +40,8 @@ class UserManager:
         if user_data and UserManager.verify_password(password, user_data['password_hash']):
             return User(user_data['id'], user_data['username'], user_data['role'])
         return None
+
+    @staticmethod
+    def get_all_students():
+        query = "SELECT id, username, role FROM users WHERE role = 'Student'"
+        return db_manager.fetch_all(query)

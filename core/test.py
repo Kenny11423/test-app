@@ -34,8 +34,15 @@ class TestSession:
     def finalize_test(self):
         query = "INSERT INTO test_results (user_id, category_id, grade, score, total_questions) VALUES (%s, %s, %s, %s, %s)"
         cursor = db_manager.execute_query(query, (self.user_id, self.category_id, self.grade, self.score, self.num_questions))
-        if cursor and hasattr(cursor, '_pool_conn'):
-            cursor._pool_conn.close()
+        
+        if cursor and hasattr(cursor, 'lastrowid'):
+            test_id = cursor.lastrowid
+            for q_id, a_id in self.user_answers.items():
+                detail_query = "INSERT INTO test_details (test_result_id, question_id, selected_answer_id) VALUES (%s, %s, %s)"
+                db_manager.execute_query(detail_query, (test_id, q_id, a_id))
+            
+            if hasattr(cursor, '_pool_conn'):
+                cursor._pool_conn.close()
         return self.score, self.num_questions
 
 class ResultHistory:
@@ -49,6 +56,23 @@ class ResultHistory:
             ORDER BY tr.test_date DESC
         """
         return db_manager.fetch_all(query, (user_id,))
+
+    @staticmethod
+    def get_test_details(test_id):
+        query = """
+            SELECT td.*, q.text as question_text, a.text as selected_answer_text, a.is_correct
+            FROM test_details td
+            JOIN questions q ON td.question_id = q.id
+            LEFT JOIN answers a ON td.selected_answer_id = a.id
+            WHERE td.test_result_id = %s
+        """
+        details = db_manager.fetch_all(query, (test_id,))
+        # Fetch correct answers for each question too
+        for d in details:
+            correct_query = "SELECT text FROM answers WHERE question_id = %s AND is_correct = 1"
+            correct_ans = db_manager.fetch_one(correct_query, (d['question_id'],))
+            d['correct_answer_text'] = correct_ans['text'] if correct_ans else "N/A"
+        return details
 
     @staticmethod
     def get_all_results():

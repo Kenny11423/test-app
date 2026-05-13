@@ -143,7 +143,12 @@ class MainWindow(QMainWindow):
         self.central_widget.setCurrentWidget(self.student_dash)
 
     def start_test(self, category_id, grade):
-        self.test_widget = TestSessionWidget(self.user.id, category_id, grade, self.show_student_dashboard)
+        # Lấy tên môn học từ category_id (nếu cần thiết, hoặc lấy từ Dashboard)
+        category_name = "Bài thi"
+        if hasattr(self, 'student_dash'):
+            category_name = self.student_dash.subject_combo.currentText()
+            
+        self.test_widget = TestSessionWidget(self.user.id, category_id, grade, category_name, self.show_student_dashboard)
         self.central_widget.addWidget(self.test_widget)
         self.central_widget.setCurrentWidget(self.test_widget)
 

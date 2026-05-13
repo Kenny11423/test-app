@@ -25,13 +25,15 @@ class ServerOfflineWidget(QWidget):
         self.card_layout.addWidget(self.icon_label)
 
         self.label = QLabel("Mất kết nối với máy chủ!")
+        self.label.setObjectName("title_label")
         self.label.setAlignment(Qt.AlignCenter)
-        self.label.setStyleSheet("font-size: 20px; font-weight: bold; color: #e74c3c;")
+        self.label.setStyleSheet("font-size: 22px; color: #ef4444;")
         self.card_layout.addWidget(self.label)
 
         self.desc = QLabel("Vui lòng kiểm tra lại kết nối mạng hoặc đảm bảo máy chủ đang hoạt động.")
         self.desc.setWordWrap(True)
         self.desc.setAlignment(Qt.AlignCenter)
+        self.desc.setStyleSheet("color: #64748b; font-size: 15px;")
         self.card_layout.addWidget(self.desc)
 
         self.retry_btn = QPushButton("Thử kết nối lại")

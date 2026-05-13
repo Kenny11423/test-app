@@ -1,6 +1,6 @@
 from PySide6.QtWidgets import (QWidget, QVBoxLayout, QLabel, QPushButton, 
                              QComboBox, QListWidget, QListWidgetItem, QMessageBox, 
-                             QHBoxLayout, QFrame)
+                             QHBoxLayout, QFrame, QFormLayout)
 from PySide6.QtCore import Qt
 from core.question import Category, Question
 from core.test import ResultHistory
@@ -15,31 +15,45 @@ class StudentDashboard(QWidget):
 
     def init_ui(self):
         self.layout = QVBoxLayout(self)
-        self.layout.setContentsMargins(20, 20, 20, 20)
-        self.layout.setSpacing(20)
+        self.layout.setContentsMargins(30, 30, 30, 30)
+        self.layout.setSpacing(25)
         
         # Header
-        header_layout = QHBoxLayout()
+        header_card = QFrame()
+        header_card.setObjectName("header_card")
+        header_card_layout = QHBoxLayout(header_card)
+        header_card_layout.setContentsMargins(20, 15, 20, 15)
+        
         self.welcome_label = QLabel(f"Chào mừng, {self.user.username}")
-        self.welcome_label.setStyleSheet("font-weight: bold; font-size: 20px; color: #007bff;")
+        self.welcome_label.setStyleSheet("font-weight: bold; font-size: 22px; color: #4a90e2;")
         self.logout_btn = QPushButton("Đăng xuất")
         self.logout_btn.setObjectName("logout_btn")
+        self.logout_btn.setFixedWidth(120)
+        self.logout_btn.setCursor(Qt.PointingHandCursor)
         self.logout_btn.clicked.connect(self.on_logout)
-        header_layout.addWidget(self.welcome_label)
-        header_layout.addStretch()
-        header_layout.addWidget(self.logout_btn)
-        self.layout.addLayout(header_layout)
+        
+        header_card_layout.addWidget(self.welcome_label)
+        header_card_layout.addStretch()
+        header_card_layout.addWidget(self.logout_btn)
+        self.layout.addWidget(header_card)
 
         # Main content
         content_layout = QHBoxLayout()
+        content_layout.setSpacing(20)
         
         # Left: Test Selection
         left_panel = QFrame(); left_panel.setObjectName("content_card")
         left_layout = QVBoxLayout(left_panel)
-        left_layout.addWidget(QLabel("### CHỌN BÀI THI"))
+        left_layout.setContentsMargins(20, 20, 20, 20)
+        left_layout.setSpacing(15)
+        
+        st_label = QLabel("CHỌN BÀI THI")
+        st_label.setObjectName("section_title")
+        left_layout.addWidget(st_label)
         
         # Filters
         filter_layout = QFormLayout()
+        filter_layout.setSpacing(10)
         self.subject_combo = QComboBox()
         self.grade_combo = QComboBox()
         for i in range(1, 13): self.grade_combo.addItem(f"Lớp {i}", i)
@@ -52,8 +66,9 @@ class StudentDashboard(QWidget):
         self.test_list = QListWidget()
         left_layout.addWidget(self.test_list)
 
-        self.start_btn = QPushButton("Bắt đầu thi")
-        self.start_btn.setFixedHeight(40)
+        self.start_btn = QPushButton("Bắt đầu thi ngay")
+        self.start_btn.setFixedHeight(45)
+        self.start_btn.setCursor(Qt.PointingHandCursor)
         self.start_btn.clicked.connect(self.handle_start_test)
         left_layout.addWidget(self.start_btn)
         content_layout.addWidget(left_panel, 2)
@@ -61,7 +76,13 @@ class StudentDashboard(QWidget):
         # Right: History
         right_panel = QFrame(); right_panel.setObjectName("content_card")
         right_layout = QVBoxLayout(right_panel)
-        right_layout.addWidget(QLabel("### KẾT QUẢ CỦA BẠN"))
+        right_layout.setContentsMargins(20, 20, 20, 20)
+        right_layout.setSpacing(15)
+        
+        res_label = QLabel("KẾT QUẢ CỦA BẠN")
+        res_label.setObjectName("section_title")
+        right_layout.addWidget(res_label)
+        
         self.results_list = QListWidget()
         right_layout.addWidget(self.results_list)
         content_layout.addWidget(right_panel, 3)
@@ -112,5 +133,3 @@ class StudentDashboard(QWidget):
         
         sub_id, grade = selected.data(Qt.UserRole)
         self.on_start_test(sub_id, grade)
-
-from PySide6.QtWidgets import QFormLayout # Cần import bổ sung

@@ -101,9 +101,14 @@ class RegisterWidget(QWidget):
 
         # Tiêu đề
         self.title_label = QLabel("ĐĂNG KÝ")
+        self.title_label.setObjectName("title_label")
         self.title_label.setAlignment(Qt.AlignCenter)
-        self.title_label.setStyleSheet("font-size: 24px; font-weight: bold; margin-bottom: 10px;")
         self.card_layout.addWidget(self.title_label)
+
+        self.subtitle_label = QLabel("Tham gia cùng chúng tôi ngay hôm nay!")
+        self.subtitle_label.setAlignment(Qt.AlignCenter)
+        self.subtitle_label.setStyleSheet("color: #64748b; margin-bottom: 10px;")
+        self.card_layout.addWidget(self.subtitle_label)
 
         # Username
         self.username_input = QLineEdit()

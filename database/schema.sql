@@ -34,11 +34,22 @@ CREATE TABLE IF NOT EXISTS test_results (
     id INT AUTO_INCREMENT PRIMARY KEY,
     user_id INT NOT NULL,
     category_id INT,
+    grade INT,
     score INT NOT NULL,
     total_questions INT NOT NULL,
     test_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
     FOREIGN KEY (category_id) REFERENCES categories(id) ON DELETE SET NULL
+);
+
+CREATE TABLE IF NOT EXISTS test_details (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    test_result_id INT NOT NULL,
+    question_id INT NOT NULL,
+    selected_answer_id INT,
+    FOREIGN KEY (test_result_id) REFERENCES test_results(id) ON DELETE CASCADE,
+    FOREIGN KEY (question_id) REFERENCES questions(id) ON DELETE CASCADE,
+    FOREIGN KEY (selected_answer_id) REFERENCES answers(id) ON DELETE SET NULL
 );
 
 -- Default Admin User (Password: admin123)

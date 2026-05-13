@@ -2,13 +2,75 @@ from PySide6.QtWidgets import (QWidget, QVBoxLayout, QLabel, QLineEdit,
                              QPushButton, QMessageBox, QComboBox, QTextEdit, 
                              QFormLayout, QHBoxLayout, QListWidget, QSpinBox,
                              QFileDialog, QTabWidget, QListWidgetItem, QFrame,
-                             QTableWidget, QTableWidgetItem, QHeaderView, QDialog)
+                             QTableWidget, QTableWidgetItem, QHeaderView, QDialog,
+                             QScrollArea)
+from PySide6.QtGui import QColor, QTextDocument, QPageSize, QPageLayout
+from PySide6.QtPrintSupport import QPrinter
 from core.question import Category, Question
-from PySide6.QtCore import Qt, QThread, Signal
-import matplotlib.pyplot as plt
-from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg as FigureCanvas
-from matplotlib.figure import Figure
+from PySide6.QtCore import Qt, QThread, Signal, QMarginsF
 import os
+
+class ResultDetailDialog(QDialog):
+    def __init__(self, test_id, student_name, parent=None):
+        super().__init__(parent)
+        self.test_id = test_id
+        self.setWindowTitle(f"Chi tiết bài làm: {student_name}")
+        self.setMinimumSize(600, 500)
+        self.init_ui()
+
+    def init_ui(self):
+        layout = QVBoxLayout(self)
+        self.scroll = QScrollArea()
+        self.scroll.setWidgetResizable(True)
+        self.content_widget = QWidget()
+        self.content_layout = QVBoxLayout(self.content_widget)
+        self.scroll.setWidget(self.content_widget)
+        layout.addWidget(self.scroll)
+
+        self.close_btn = QPushButton("Đóng")
+        self.close_btn.clicked.connect(self.close)
+        layout.addWidget(self.close_btn)
+
+        self.load_details()
+
+    def load_details(self):
+        def fetch():
+            from core.test import ResultHistory
+            return ResultHistory.get_test_details(self.test_id)
+        self.loader = DataLoader(fetch)
+        self.loader.data_loaded.connect(self.on_details_loaded)
+        self.loader.start()
+
+    def on_details_loaded(self, details):
+        if not details:
+            self.content_layout.addWidget(QLabel("Không tìm thấy dữ liệu chi tiết cho bài thi này."))
+            return
+        
+        for i, d in enumerate(details):
+            q_box = QFrame()
+            q_box.setObjectName("content_card")
+            q_box.setStyleSheet("border: 1px solid #ccc; border-radius: 5px; padding: 10px; margin-bottom: 10px;")
+            q_vbox = QVBoxLayout(q_box)
+            
+            q_label = QLabel(f"Câu {i+1}: {d['question_text']}")
+            q_label.setWordWrap(True)
+            q_label.setStyleSheet("font-weight: bold;")
+            q_vbox.addWidget(q_label)
+            
+            status = "✅ Đúng" if d['is_correct'] else "❌ Sai"
+            ans_color = "#27ae60" if d['is_correct'] else "#e74c3c"
+            
+            user_ans = d['selected_answer_text'] or "(Không trả lời)"
+            ans_label = QLabel(f"Học sinh chọn: {user_ans} ({status})")
+            ans_label.setStyleSheet(f"color: {ans_color};")
+            q_vbox.addWidget(ans_label)
+            
+            if not d['is_correct']:
+                correct_label = QLabel(f"Đáp án đúng: {d['correct_answer_text']}")
+                correct_label.setStyleSheet("color: #27ae60; font-style: italic;")
+                q_vbox.addWidget(correct_label)
+            
+            self.content_layout.addWidget(q_box)
 
 class AIDialog(QDialog):
     def __init__(self, parent=None):
@@ -140,22 +202,33 @@ class AdminDashboard(QWidget):
 
     def init_ui(self):
         self.main_layout = QVBoxLayout(self)
-        self.main_layout.setContentsMargins(20, 20, 20, 20)
-        self.main_layout.setSpacing(15)
-        header_layout = QHBoxLayout()
+        self.main_layout.setContentsMargins(30, 30, 30, 30)
+        self.main_layout.setSpacing(25)
+        
+        # Header
+        header_card = QFrame()
+        header_card.setObjectName("header_card")
+        header_layout = QHBoxLayout(header_card)
+        header_layout.setContentsMargins(20, 15, 20, 15)
+        
         self.welcome_label = QLabel(f"Quản trị viên: {self.user.username}")
-        self.welcome_label.setStyleSheet("font-weight: bold; font-size: 18px; color: #007bff;")
+        self.welcome_label.setStyleSheet("font-weight: bold; font-size: 22px; color: #4a90e2;")
+        
         self.logout_btn = QPushButton("Đăng xuất")
         self.logout_btn.setObjectName("logout_btn")
+        self.logout_btn.setFixedWidth(120)
+        self.logout_btn.setCursor(Qt.PointingHandCursor)
         self.logout_btn.clicked.connect(self.on_logout)
+        
         header_layout.addWidget(self.welcome_label)
         header_layout.addStretch()
         header_layout.addWidget(self.logout_btn)
-        self.main_layout.addLayout(header_layout)
+        self.main_layout.addWidget(header_card)
+
         self.tabs = QTabWidget()
         self.tab1 = QWidget(); self.setup_tab1(); self.tabs.addTab(self.tab1, "Thêm Câu hỏi")
         self.tab2 = QWidget(); self.setup_tab2(); self.tabs.addTab(self.tab2, "Quản lý Đề thi")
-        self.tab3 = QWidget(); self.setup_tab3(); self.tabs.addTab(self.tab3, "Kết quả")
+        self.tab3 = QWidget(); self.setup_tab3(); self.tabs.addTab(self.tab3, "Kết quả & Thống kê")
         self.main_layout.addWidget(self.tabs)
         self.refresh_categories(); self.refresh_results()
 
@@ -165,62 +238,108 @@ class AdminDashboard(QWidget):
 
     def setup_tab1(self):
         layout = QVBoxLayout(self.tab1)
-        layout.setContentsMargins(20, 20, 20, 20); layout.setSpacing(15)
+        layout.setContentsMargins(20, 20, 20, 20); layout.setSpacing(20)
+        
         cat_group = QFrame(); cat_group.setObjectName("content_card"); cat_vbox = QVBoxLayout(cat_group)
-        title1 = QLabel("QUẢN LÝ MÔN HỌC"); title1.setStyleSheet("font-weight: bold; color: #007bff;"); cat_vbox.addWidget(title1)
+        cat_vbox.setContentsMargins(20, 20, 20, 20); cat_vbox.setSpacing(15)
+        
+        title1 = QLabel("QUẢN LÝ MÔN HỌC"); title1.setObjectName("section_title"); cat_vbox.addWidget(title1)
         self.cat_name_input = QLineEdit(); self.cat_name_input.setPlaceholderText("Tên Môn học (VD: Toán)")
         self.cat_desc_input = QLineEdit(); self.cat_desc_input.setPlaceholderText("Mô tả")
         self.add_cat_btn = QPushButton("Thêm Môn học"); self.add_cat_btn.clicked.connect(self.add_category)
         cat_vbox.addWidget(self.cat_name_input); cat_vbox.addWidget(self.cat_desc_input); cat_vbox.addWidget(self.add_cat_btn)
         layout.addWidget(cat_group)
+        
         q_group = QFrame(); q_group.setObjectName("content_card"); q_vbox = QVBoxLayout(q_group)
-        title2 = QLabel("THÊM CÂU HỎI MỚI"); title2.setStyleSheet("font-weight: bold; color: #007bff;"); q_vbox.addWidget(title2)
+        q_vbox.setContentsMargins(20, 20, 20, 20); q_vbox.setSpacing(15)
+        
+        title2 = QLabel("THÊM CÂU HỎI MỚI"); title2.setObjectName("section_title"); q_vbox.addWidget(title2)
         h_sel = QHBoxLayout()
         self.q_cat_combo = QComboBox(); self.q_grade_combo = QComboBox()
         for i in range(1, 13): self.q_grade_combo.addItem(f"Lớp {i}", i)
         h_sel.addWidget(QLabel("Môn:")); h_sel.addWidget(self.q_cat_combo, 2)
         h_sel.addWidget(QLabel("Lớp:")); h_sel.addWidget(self.q_grade_combo, 1)
         q_vbox.addLayout(h_sel)
-        self.q_text_input = QTextEdit(); self.q_text_input.setPlaceholderText("Nội dung câu hỏi"); self.q_text_input.setMaximumHeight(80); q_vbox.addWidget(self.q_text_input)
-        self.difficulty_combo = QComboBox(); self.difficulty_combo.addItems(["Easy", "Medium", "Hard"]); q_vbox.addWidget(self.difficulty_combo)
+        
+        self.q_text_input = QTextEdit(); self.q_text_input.setPlaceholderText("Nội dung câu hỏi"); self.q_text_input.setMaximumHeight(100); q_vbox.addWidget(self.q_text_input)
+        
+        diff_layout = QHBoxLayout()
+        diff_layout.addWidget(QLabel("Độ khó:"))
+        self.difficulty_combo = QComboBox(); self.difficulty_combo.addItems(["Easy", "Medium", "Hard"])
+        diff_layout.addWidget(self.difficulty_combo)
+        q_vbox.addLayout(diff_layout)
+        
         self.choices_layout = QVBoxLayout(); self.choice_inputs = []
         for i in range(4):
             h_layout = QHBoxLayout(); c_input = QLineEdit(); c_input.setPlaceholderText(f"Lựa chọn {i+1}")
-            is_correct_btn = QPushButton("Đúng?"); is_correct_btn.setCheckable(True); is_correct_btn.setFixedWidth(60)
+            is_correct_btn = QPushButton("Đúng?"); is_correct_btn.setCheckable(True); is_correct_btn.setFixedWidth(80)
             h_layout.addWidget(c_input); h_layout.addWidget(is_correct_btn); self.choices_layout.addLayout(h_layout); self.choice_inputs.append((c_input, is_correct_btn))
         q_vbox.addLayout(self.choices_layout)
+        
         h_btn_layout = QHBoxLayout()
         self.add_q_btn = QPushButton("Thêm thủ công"); self.add_q_btn.clicked.connect(self.add_question)
         self.import_pdf_btn = QPushButton("Nhập từ PDF"); self.import_pdf_btn.clicked.connect(self.import_from_pdf)
-        self.ai_btn = QPushButton("✨ Tạo bằng AI"); self.ai_btn.setStyleSheet("background-color: #6f42c1; color: white;"); self.ai_btn.clicked.connect(self.generate_with_ai)
+        self.ai_btn = QPushButton("✨ Tạo bằng AI"); self.ai_btn.setObjectName("ai_btn"); self.ai_btn.clicked.connect(self.generate_with_ai)
         h_btn_layout.addWidget(self.add_q_btn); h_btn_layout.addWidget(self.import_pdf_btn); h_btn_layout.addWidget(self.ai_btn)
         q_vbox.addLayout(h_btn_layout); layout.addWidget(q_group)
 
     def setup_tab2(self):
-        layout = QVBoxLayout(self.tab2); layout.setContentsMargins(20, 20, 20, 20); layout.setSpacing(15)
-        title = QLabel("QUẢN LÝ ĐỀ THI"); title.setStyleSheet("font-weight: bold; font-size: 16px; color: #007bff;"); layout.addWidget(title)
-        filter_layout = QHBoxLayout()
+        layout = QVBoxLayout(self.tab2); layout.setContentsMargins(20, 20, 20, 20); layout.setSpacing(20)
+        title = QLabel("DANH SÁCH CÂU HỎI"); title.setObjectName("section_title"); layout.addWidget(title)
+        
+        filter_card = QFrame(); filter_card.setObjectName("content_card")
+        filter_layout = QHBoxLayout(filter_card)
         self.manage_cat_combo = QComboBox(); self.manage_grade_combo = QComboBox()
         for i in range(1, 13): self.manage_grade_combo.addItem(f"Lớp {i}", i)
         self.manage_cat_combo.currentIndexChanged.connect(self.refresh_manage_questions)
         self.manage_grade_combo.currentIndexChanged.connect(self.refresh_manage_questions)
-        filter_layout.addWidget(QLabel("Môn:")); filter_layout.addWidget(self.manage_cat_combo)
-        filter_layout.addWidget(QLabel("Lớp:")); filter_layout.addWidget(self.manage_grade_combo)
-        layout.addLayout(filter_layout)
+        filter_layout.addWidget(QLabel("Môn học:")); filter_layout.addWidget(self.manage_cat_combo)
+        filter_layout.addWidget(QLabel("Khối lớp:")); filter_layout.addWidget(self.manage_grade_combo)
+        layout.addWidget(filter_card)
+        
         self.q_table = QTableWidget(); self.q_table.setColumnCount(4); self.q_table.setHorizontalHeaderLabels(["ID", "Nội dung", "Độ khó", "Thao tác"])
         self.q_table.horizontalHeader().setSectionResizeMode(1, QHeaderView.Stretch)
+        self.q_table.setAlternatingRowColors(True)
         layout.addWidget(self.q_table)
-        self.loading_label = QLabel("Đang tải..."); self.loading_label.hide(); layout.addWidget(self.loading_label)
-        self.refresh_q_btn = QPushButton("Làm mới"); self.refresh_q_btn.clicked.connect(self.refresh_manage_questions); layout.addWidget(self.refresh_q_btn)
+        
+        self.loading_label = QLabel("Đang tải dữ liệu..."); self.loading_label.setAlignment(Qt.AlignCenter); self.loading_label.hide(); layout.addWidget(self.loading_label)
+        
+        h_btn_layout = QHBoxLayout()
+        self.refresh_q_btn = QPushButton("🔄 Làm mới"); self.refresh_q_btn.clicked.connect(self.refresh_manage_questions)
+        h_btn_layout.addStretch(); h_btn_layout.addWidget(self.refresh_q_btn)
+        layout.addLayout(h_btn_layout)
 
     def setup_tab3(self):
-        layout = QVBoxLayout(self.tab3); layout.setContentsMargins(20, 20, 20, 20); layout.setSpacing(15)
-        self.figure = Figure(figsize=(5, 4), dpi=100); self.canvas = FigureCanvas(self.figure); layout.addWidget(self.canvas, 1)
-        self.stats_label = QLabel("Đang tải..."); self.stats_label.setObjectName("stats_label"); layout.addWidget(self.stats_label)
-        self.res_list = QListWidget(); self.res_list.setMaximumHeight(150); layout.addWidget(self.res_list)
-        h_layout = QHBoxLayout(); self.refresh_results_btn = QPushButton("Làm mới"); self.refresh_results_btn.clicked.connect(self.refresh_results)
-        self.export_res_btn = QPushButton("Xuất CSV"); self.export_res_btn.clicked.connect(self.export_to_csv)
-        h_layout.addWidget(self.refresh_results_btn); h_layout.addWidget(self.export_res_btn); layout.addLayout(h_layout)
+        layout = QVBoxLayout(self.tab3); layout.setContentsMargins(20, 20, 20, 20); layout.setSpacing(20)
+        
+        main_content = QHBoxLayout()
+        
+        # Panel trái: Danh sách học sinh
+        student_panel = QFrame(); student_panel.setObjectName("content_card"); student_vbox = QVBoxLayout(student_panel)
+        student_vbox.addWidget(QLabel("DANH SÁCH HỌC SINH"), 0, Qt.AlignCenter)
+        self.student_list = QListWidget()
+        self.student_list.itemClicked.connect(self.on_student_selected)
+        student_vbox.addWidget(self.student_list)
+        main_content.addWidget(student_panel, 1)
+        
+        # Panel phải: Kết quả chi tiết
+        result_panel = QFrame(); result_panel.setObjectName("content_card"); result_vbox = QVBoxLayout(result_panel)
+        result_vbox.addWidget(QLabel("KẾT QUẢ BÀI LÀM"), 0, Qt.AlignCenter)
+        self.student_res_table = QTableWidget()
+        self.student_res_table.setColumnCount(5)
+        self.student_res_table.setHorizontalHeaderLabels(["Môn học", "Lớp", "Điểm", "Số câu", "Ngày làm"])
+        self.student_res_table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
+        self.student_res_table.itemDoubleClicked.connect(self.show_test_detail)
+        result_vbox.addWidget(self.student_res_table)
+        main_content.addWidget(result_panel, 2)
+        
+        layout.addLayout(main_content)
+        
+        h_layout = QHBoxLayout(); 
+        self.refresh_results_btn = QPushButton("Làm mới dữ liệu"); self.refresh_results_btn.clicked.connect(self.refresh_results)
+        self.export_res_btn = QPushButton("Xuất báo cáo (PDF)"); self.export_res_btn.clicked.connect(self.export_to_pdf)
+        h_layout.addStretch(); h_layout.addWidget(self.refresh_results_btn); h_layout.addWidget(self.export_res_btn)
+        layout.addLayout(h_layout)
 
     def refresh_categories(self):
         self.manage_cat_combo.blockSignals(True)
@@ -246,10 +365,11 @@ class AdminDashboard(QWidget):
             self.q_table.setItem(row, 1, QTableWidgetItem(q.text))
             diff_map = {"Easy": "Dễ", "Medium": "TB", "Hard": "Khó"}
             self.q_table.setItem(row, 2, QTableWidgetItem(diff_map.get(q.difficulty, q.difficulty)))
-            act_w = QWidget(); act_l = QHBoxLayout(act_w); act_l.setContentsMargins(2,2,2,2)
-            ed_b = QPushButton("Sửa"); ed_b.setFixedWidth(40); ed_b.clicked.connect(lambda chk=False, qo=q: self.edit_question(qo))
-            de_b = QPushButton("Xóa"); de_b.setFixedWidth(40); de_b.setObjectName("delete_btn"); de_b.clicked.connect(lambda chk=False, qi=q.id: self.delete_question(qi))
-            act_l.addWidget(ed_b); act_l.addWidget(de_b); self.q_table.setCellWidget(row, 3, act_w)
+            act_w = QWidget(); act_l = QHBoxLayout(act_w); act_l.setContentsMargins(5,2,5,2); act_l.setSpacing(10)
+            ed_b = QPushButton("Sửa"); ed_b.clicked.connect(lambda chk=False, qo=q: self.edit_question(qo))
+            de_b = QPushButton("Xóa"); de_b.setObjectName("delete_btn"); de_b.clicked.connect(lambda chk=False, qi=q.id: self.delete_question(qi))
+            act_l.addStretch(); act_l.addWidget(ed_b); act_l.addWidget(de_b); act_l.addStretch()
+            self.q_table.setCellWidget(row, 3, act_w)
 
     def edit_question(self, question):
         dialog = EditQuestionDialog(question, self)
@@ -328,26 +448,74 @@ class AdminDashboard(QWidget):
             self.refresh_manage_questions()
 
     def refresh_results(self):
-        self.res_list.clear()
+        self.student_list.clear()
+        self.student_res_table.setRowCount(0)
         def fetch():
-            from core.test import ResultHistory, PerformanceAnalyzer
-            results = ResultHistory.get_all_results(); stats = PerformanceAnalyzer.calculate_stats(results)
-            return results, stats
-        self.results_loader = DataLoader(fetch); self.results_loader.data_loaded.connect(self.on_results_loaded); self.results_loader.start()
+            from core.user import UserManager
+            return UserManager.get_all_students()
+        self.students_loader = DataLoader(fetch)
+        self.students_loader.data_loaded.connect(self.on_students_loaded)
+        self.students_loader.start()
 
-    def on_results_loaded(self, data):
-        if not data: return
-        results, stats = data; self.figure.clear(); ax = self.figure.add_subplot(111)
-        recent = results[:10][::-1]; users = [r['username'][:8] for r in recent]; scores = [(r['score']/r['total_questions'])*100 for r in recent]
-        is_dark = self.current_theme_mode == 'dark'
-        bg = '#212529' if is_dark else '#f8f9fa'; fg = '#f8f9fa' if is_dark else '#212529'; bc = '#0d6efd' if is_dark else '#007bff'
-        self.figure.patch.set_facecolor(bg); ax.set_facecolor(bg); ax.bar(users, scores, color=bc, alpha=0.7); ax.tick_params(colors=fg); ax.set_ylim(0, 105); self.canvas.draw()
-        if stats: self.stats_label.setText(f"📊 Tổng: {stats['count']} | TB: {stats['mean']:.1f}%")
-        for res in results: self.res_list.addItem(f"{res['username']} | Lớp {res.get('grade','?')} | {res['score']}/{res['total_questions']}")
+    def on_students_loaded(self, students):
+        if not students: return
+        for student in students:
+            item = QListWidgetItem(f"👤 {student['username']}")
+            item.setData(Qt.UserRole, student['id'])
+            item.setData(Qt.UserRole + 1, student['username'])
+            self.student_list.addItem(item)
 
-    def export_to_csv(self):
-        import csv; from core.test import ResultHistory; res = ResultHistory.get_all_results()
-        if res:
-            with open('all_results.csv','w') as f:
-                w = csv.DictWriter(f, fieldnames=res[0].keys()); w.writeheader(); w.writerows(res)
-            QMessageBox.information(self, "Xong", "Đã xuất CSV!")
+    def on_student_selected(self, item):
+        user_id = item.data(Qt.UserRole)
+        self.current_student_name = item.data(Qt.UserRole + 1)
+        self.student_res_table.setRowCount(0)
+        def fetch():
+            from core.test import ResultHistory
+            return ResultHistory.get_user_results(user_id)
+        self.res_loader = DataLoader(fetch)
+        self.res_loader.data_loaded.connect(self.on_student_results_loaded)
+        self.res_loader.start()
+
+    def on_student_results_loaded(self, results):
+        if not results: return
+        for r in results:
+            row = self.student_res_table.rowCount()
+            self.student_res_table.insertRow(row)
+            cat_item = QTableWidgetItem(r['category_name'] or "N/A")
+            cat_item.setData(Qt.UserRole, r['id']) # Store test_id
+            self.student_res_table.setItem(row, 0, cat_item)
+            self.student_res_table.setItem(row, 1, QTableWidgetItem(f"Lớp {r['grade']}"))
+            self.student_res_table.setItem(row, 2, QTableWidgetItem(str(r['score'])))
+            self.student_res_table.setItem(row, 3, QTableWidgetItem(str(r['total_questions'])))
+            self.student_res_table.setItem(row, 4, QTableWidgetItem(str(r['test_date'])))
+
+    def show_test_detail(self, item):
+        row = item.row()
+        test_id = self.student_res_table.item(row, 0).data(Qt.UserRole)
+        dialog = ResultDetailDialog(test_id, self.current_student_name, self)
+        dialog.exec()
+
+    def export_to_pdf(self):
+        if self.student_res_table.rowCount() == 0:
+            QMessageBox.warning(self, "Lỗi", "Không có dữ liệu để xuất!")
+            return
+        path, _ = QFileDialog.getSaveFileName(self, "Lưu Báo cáo PDF", f"BaoCao_{self.current_student_name}.pdf", "PDF (*.pdf)")
+        if not path: return
+        html = f"<h1>Báo cáo kết quả học tập</h1>"
+        html += f"<p><b>Học sinh:</b> {self.current_student_name}</p>"
+        html += "<table border='1' cellspacing='0' cellpadding='5' style='width: 100%; border-collapse: collapse;'>"
+        html += "<tr><th>Môn học</th><th>Lớp</th><th>Điểm</th><th>Số câu</th><th>Ngày làm</th></tr>"
+        for row in range(self.student_res_table.rowCount()):
+            html += "<tr>"
+            for col in range(self.student_res_table.columnCount()):
+                html += f"<td>{self.student_res_table.item(row, col).text()}</td>"
+            html += "</tr>"
+        html += "</table>"
+        doc = QTextDocument()
+        doc.setHtml(html)
+        printer = QPrinter(QPrinter.HighResolution)
+        printer.setOutputFormat(QPrinter.PdfFormat)
+        printer.setOutputFileName(path)
+        printer.setPageLayout(QPageLayout(QPageSize(QPageSize.A4), QPageLayout.Portrait, QMarginsF(15, 15, 15, 15)))
+        doc.print_(printer)
+        QMessageBox.information(self, "Xong", f"Đã xuất báo cáo PDF thành công tại {path}")
